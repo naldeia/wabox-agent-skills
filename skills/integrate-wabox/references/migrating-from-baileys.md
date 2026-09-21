@@ -4,9 +4,9 @@ Para quem hoje mantém um socket Baileys (ou whatsapp-web.js) por número dentro
 
 ## O que não migra
 
-- **Sessão.** O auth state do Baileys (`creds`/`keys`, `useMultiFileAuthState`) não é portável. Todo número pareia de novo no Wabox (`GET /qr-code` ou `GET /phone-code/{phone}`) e vira um **novo** aparelho conectado. Encerre a sessão antiga com `sock.logout()` (libera a vaga de linked device — máx. 4 — e evita dois clientes no mesmo número). Planeje a migração por canal, com uma tela de "reconectar", não um corte geral.
+- **Sessão.** O auth state do Baileys (`creds`/`keys`, `useMultiFileAuthState`) não é importado pelo Wabox. Todo número pareia de novo (`GET /qr-code` ou `GET /phone-code/{phone}`) e vira um novo aparelho conectado. Planeje por canal, com tela de "reconectar" e janela de troca. Pare envios/consumo do provedor anterior para não ter dois produtores ativos. `sock.logout()` revoga a sessão antiga: só faça no ponto de corte planejado, pois rollback depois exige novo pareamento do Baileys.
 - **Histórico.** Não há `messaging-history.set`. O que existe: `GET /chats/{phone}/messages` com até 50 mensagens recentes por conversa do sync do pareamento, sem mídia. O histórico já salvo no seu banco continua sendo a fonte.
-- **Store em memória** (`makeInMemoryStore`, `getMessage`). Não existe equivalente; o Wabox não persiste mensagens. Responder/editar/reagir a mensagem antiga (anterior ao pareamento ou fora do cache de ~4.000 msgs do engine) dá `message_not_found` — envie sem a citação como fallback.
+- **Store em memória** (`makeInMemoryStore`, `getMessage`). Não há store completo consultável; preserve mensagens/mídias no Kinbox. O cache do engine (~4.000 msgs) se perde no restart e afeta encaminhamento/edição de legenda; votos exigem o segredo da enquete original. Citação fora do cache é best effort; edição de texto/reação não têm o mesmo requisito. Teste mensagens anteriores ao pareamento, incluindo autoria/participante em grupos.
 
 ## Identificadores
 
@@ -15,7 +15,7 @@ Para quem hoje mantém um socket Baileys (ou whatsapp-web.js) por número dentro
 | `5511988887777@s.whatsapp.net` | `phone: "5511988887777"` |
 | `120363…@g.us` | `120363…-group` (webhooks e respostas); `@g.us` é aceito como entrada |
 | `…@lid` · `…@newsletter` · `status@broadcast` | iguais |
-| `key.id` | `message_id` — é o mesmo id do WhatsApp, então ids já gravados no seu banco continuam batendo com `message_status`/`reference_message_id` |
+| `key.id` | `message_id` é o ID do WhatsApp; preserve IDs antigos para referências locais, sem presumir que o novo aparelho receberá recibos/histórico retroativos |
 | `key.fromMe` · `key.participant` · `pushName` | `from_me` · `participant_phone`/`participant_lid` · `sender_name` |
 | `messageTimestamp` (s) | `momment` (epoch **ms**) |
 
@@ -47,7 +47,7 @@ Converta os JIDs guardados uma vez (função `jidToPhone`) em vez de espalhar `r
 | Baileys | Wabox |
 | --- | --- |
 | `sock.sendMessage(jid, { text }, { quoted })` | `POST /send-text { phone, message, reply_to_message_id }` |
-| `{ image|video|audio|document: { url } | Buffer, caption, ptt, fileName }` | `POST /send-image|video|audio|document` com URL pública ou base64 (`send-audio` já sai como voice note Opus/OGG por padrão — `ptt: false` para arquivo de áudio; a conversão é do Wabox, dispense o seu ffmpeg) |
+| `{ image|video|audio|document: { url } | Buffer, caption, ptt, fileName }` | `POST /send-image|video|audio|document` com URL pública ou base64 (`send-audio` usa `ptt: true` por padrão; conversões dependem do ffmpeg no engine — homologue os formatos antes de retirar a conversão local) |
 | `{ react }` · `{ delete: key }` · `{ edit: key }` · `{ forward }` | `/send-reaction` · `DELETE /messages` · `edit_message_id` no `send-text` · `/forward-message` |
 | `{ location }` · `{ contacts }` · `{ poll }` | `/send-location` · `/send-contact(s)` · `/send-poll` |
 | `sock.readMessages(keys)` | `POST /read-message` (ou `settings.auto_read_message`) |
@@ -60,15 +60,29 @@ Converta os JIDs guardados uma vez (função `jidToPhone`) em vez de espalhar `r
 
 ## Diferenças de comportamento que quebram código portado
 
-- **Envio é assíncrono.** `sendMessage` devolvia a mensagem enviada; `POST /send-*` devolve `{ message_id, wabox_id, status: "queued" }` e o resultado vem no webhook `delivery` (erro em `error_code`). Grave a mensagem como "na fila" com o `message_id` da resposta e atualize pelos webhooks. O `message_id` já é o definitivo — dá para correlacionar `message_status` mesmo que chegue antes do seu `UPDATE`.
-- **Fila com intervalo anti-ban** (1–3 s entre mensagens por instância, configurável). Não implemente throttle próprio por cima; não espere envio instantâneo em rajadas.
+- **Envio é assíncrono.** `POST /send-*` devolve `{ message_id, wabox_id, status: "queued" }`; o resultado vem em `delivery` (falha em `error`/`error_code`). `wabox_id` identifica a operação. Envios novos retornam o ID definitivo da mensagem; edição/reação/revogação/pin retornam o ID alvo. Guarde recibos que chegarem antes da resposta HTTP para conciliar depois. Nunca marque entregue/lida apenas pelo `200` do envio ou por `delivery`.
+- **Fila com intervalo anti-ban** (1–3 s entre mensagens por instância, configurável). Revise o throttle de transporte para evitar atraso duplicado, preservando limites de negócio/campanha do Kinbox. Não espere envio instantâneo em rajadas.
 - **Instância desconectada enfileira** (até 1.000 msgs / `queue_max_age_hours`) em vez de lançar erro. Se o produto precisa falhar na hora, `disable_enqueue_when_disconnected: true` e trate `409`.
-- **Envio não é idempotente**: em timeout de rede, confira `GET /queue`/`delivery` antes de repetir.
-- **Webhooks repetem e são assinados**: deduplique por `event_id`, verifique `X-Wabox-Signature` sobre o corpo cru, responda `200` antes de processar. As entregas de uma instância saem uma por vez, na ordem dos eventos.
+- **Envio não é idempotente**: em timeout/rede/`5xx`, reconcilie antes de repetir. Ausência em `GET /queue` não prova que a mensagem não saiu. Sem IDs confiáveis, mantenha a operação como resultado desconhecido para revisão.
+- **Webhooks repetem, podem chegar fora de ordem e são assinados**: valide o corpo cru, deduplique por `(instance_id, event_id)`, grave duravelmente antes do `200` e processe em worker. Não regrida `READ` ao receber `SENT` atrasado. `READ_BY_ME` é leitura local; em grupos preserve recibos por participante.
+- **Evento não é mensagem**: edição/placeholder definitivo usam o mesmo `message_id` com outro `event_id`. Faça upsert/atualização, sem descartar a mudança como duplicada. Com `notify_sent_by_me: true`, concilie `from_api: true` com o envio existente; mensagens `from_me: true` não devem disparar automações de entrada.
 - **Sem acesso ao proto cru.** Tipos não mapeados chegam como `unsupported { wa_type }`. Se o código atual lê campos do `WAMessage` fora da tabela acima, confira o schema `WebhookReceived` no OpenAPI antes de assumir que existe.
 
-## Roteiro sugerido
+## Roteiro para Kinbox / SaaS com vários clientes
 
-1. Criar uma implementação "wabox" atrás da mesma interface de canal que hoje embrulha o Baileys (enviar, status de conexão, QR, handlers de entrada), com flag por canal.
-2. Endpoint de webhook único (`single_url`) → verificar assinatura → achar o canal por `X-Wabox-Instance-Id` → normalizar para o mesmo modelo interno que o `messages.upsert` alimentava.
-3. Migrar canal a canal: criar instância → `logout` do Baileys → parear → virar a flag. Manter o Baileys só para quem ainda não pareou; remover quando zerar.
+1. **Inventário no repositório de destino.** Localize o adaptador Baileys, criação/remoção de canais, auth state, QR, filas, tipos de mensagem, recibos, grupos, automações e persistência de mídia. Monte um de/para dos recursos realmente usados. Marque lacunas/best effort antes de implementar; não presuma paridade só pela existência de uma rota. A arquitetura interna do Kinbox deve ser descoberta no código dele.
+2. **Adaptador e dados.** Implemente Wabox na interface de canal existente, com provedor selecionável por canal durante a transição. Persista `(tenant_id, channel_id) → instance_id/token`, status/horário, número e modo de segredo. Um cliente pode ter vários números. Crie restrições únicas e serialize provisionamento por canal, conforme `wabox-partner`. O backend faz a ponte de QR/status para o front-end; URLs com token nunca vão para o navegador.
+3. **Recebimento.** Configure webhooks antes do pareamento. Corpo cru → HMAC com segredo efetivo → envelope válido → tenant/canal pelo `instance_id` assinado → inbox durável → `200` → normalizador para os modelos atuais. Headers são apenas auxiliares e devem bater com o corpo. Recupere eventos que chegarem durante o provisionamento sem vinculá-los a outro cliente.
+4. **Saída e reconciliação.** Grave a intenção de envio antes da chamada; salve `wabox_id` e `message_id` da resposta. Concilie `delivery`, recibos e eco `received` sem duplicar mensagens nem disparar automações sobre o próprio envio. Baixe mídia recebida antes da expiração de 24 h. Preserve o histórico atual; o sync parcial não é um backfill garantido.
+5. **Piloto e troca.** Homologue um canal de teste. Em cada migração, pause novos envios do provedor antigo, drene/reconcilie os pendentes e controle o consumo de entrada. Crie e vincule a instância, pareie, confirme o número/status e valide ida e volta antes de liberar Wabox como único provedor ativo. Planeje o ponto de logout do Baileys e a recuperação de mensagens durante a janela. Não prometa rollback transparente após revogar a sessão antiga.
+6. **Desativação final.** Quando todos os canais estiverem migrados e homologados, retire Baileys, workers de reconexão, listeners, dependências e armazenamento de auth state sem apagar histórico de conversas. A flag é transitória; o objetivo final é Wabox como único provedor dessa integração linked device.
+
+## Critérios de homologação
+
+- Dois tenants, incluindo um com dois canais, sem vazamento de credenciais/eventos entre eles; dois pedidos concorrentes de criação não geram instâncias duplicadas.
+- QR inicial/expirado/`value: null`, pareamento, desconexão temporária, logout, reconexão e exclusão definitiva.
+- Texto, imagem, áudio PTT, documento, resposta/citação, edição, reação, revogação e grupos conforme o uso real; IDs PN/LID conciliados sem duplicar contatos.
+- HMAC válido/inválido, segredo herdado/próprio, header divergente, evento duplicado e recibo fora de ordem ou anterior à resposta HTTP.
+- Persistência indisponível retorna `5xx`; worker que falha após o ACK retoma o evento salvo. Eco da API e envio pelo celular não criam mensagens duplicadas nem loops.
+- `429`, fila offline/expiração, falha de mídia, timeout de envio e criação com resultado desconhecido, sem retry cego.
+- Histórico/mídias existentes preservados; nova mídia copiada antes de expirar; piloto e plano de troca/rollback documentados antes de migrar clientes.

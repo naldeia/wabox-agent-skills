@@ -5,7 +5,7 @@ description: Diagnostica problemas com a API de WhatsApp do Wabox — mensagem "
 
 # Diagnosticar o Wabox
 
-Comece sempre pelos fatos, na ordem: **status da instância → resposta HTTP da chamada → webhook `delivery` → recibos `message_status` → logs de webhook no painel**. Use `../integrate-wabox/scripts/wabox.sh` para consultar (`WABOX_INSTANCE_ID`/`WABOX_TOKEN`).
+Comece pelos fatos: **status da instância → resposta HTTP da chamada → webhook `delivery` → recibos `message_status` → logs de webhook no painel**. Instale também `integrate-wabox` e use `../integrate-wabox/scripts/wabox.sh` para consultar (`WABOX_INSTANCE_ID`/`WABOX_TOKEN`). Diagnóstico começa por leituras; restart, reenvio, troca de webhook e exclusão alteram a operação e devem estar no escopo autorizado. Não redirecione webhooks de clientes reais para um sink de teste.
 
 ## 1. A instância está conectada?
 
@@ -17,9 +17,9 @@ Comece sempre pelos fatos, na ordem: **status da instância → resposta HTTP da
 | `qr` / `logged_out` | aparelho removido no celular ou nunca pareado | novo QR (`GET /qr-code`) ou `GET /phone-code/{phone}` |
 | `disconnected` / `connecting` | queda de rede ou outra sessão web assumiu; reconecta sozinha | espere; se persistir > 2 min, `POST /restart` |
 | `starting` | sessão carregando | espere segundos |
-| `banned` | número banido pelo WhatsApp | não volta; trocar de número, ler anti-ban |
+| `banned` | bloqueio reportado pelo WhatsApp | suspenda envios e investigue com suporte; não presuma bloqueio permanente nem entre em loop de restart |
 
-Celular precisa existir e abrir o WhatsApp de tempos em tempos (é linked device). `smartphone_connected: false` por muito tempo = celular sem internet.
+É uma conexão linked device. Não use `smartphone_connected: false` isoladamente para concluir que o celular está sem internet: no fallback sem resposta do engine esse campo reflete o último status da instância.
 
 ## 2. "Enviei e não chegou"
 
@@ -28,7 +28,7 @@ Celular precisa existir e abrir o WhatsApp de tempos em tempos (é linked device
 3. Chegou `delivery` com o mesmo `wabox_id`?
    - **sem `error_code`** → saiu do aparelho. Se o contato não recebeu, olhe `message_status`: parado em `SENT` sem `RECEIVED` = contato sem internet, bloqueou o número, ou shadow ban.
    - `phone_not_on_whatsapp` → confira `GET /phone-exists/{phone}` (nono dígito, DDI).
-   - `message_not_found` → a referência (reply/forward/edit/vote) saiu do cache do engine (restart ou > ~4.000 msgs). Reenvie sem a referência.
+   - `message_not_found` → encaminhamento/edição de legenda fora do cache, ou voto sem o segredo da enquete original. Não reenvie como mensagem nova automaticamente; confira a ação solicitada.
    - `media_download_failed` / `media_invalid` → URL não pública, lenta, ou acima de 16 MB/100 MB; teste a URL com `curl -I`; use base64.
    - `send_timeout` → aparelho não confirmou; pode ter saído. Não reenvie às cegas; olhe `message_status`.
    - `queue_expired` → esperou mais que `queue_max_age_hours` (padrão 12 h) na fila, quase sempre porque a instância ficou desconectada; nada saiu, reenviar é seguro. Se acontece muito, o problema é a conexão (seção 2), não o envio.
@@ -38,9 +38,9 @@ Celular precisa existir e abrir o WhatsApp de tempos em tempos (é linked device
 
 ## 3. "Webhook não chega"
 
-1. `wabox.sh GET webhooks` → a URL do tipo certo está preenchida? `received` ≠ `delivery` ≠ `message_status`. Filtros `ignore_*` podem estar descartando (grupos, tipos de mídia); `received` **não** inclui as próprias mensagens sem `notify_sent_by_me`.
+1. `wabox.sh GET webhooks` → se `use_workspace_webhooks: true`, consulte `GET /account/webhooks` ou o painel para ver URLs/filtros/segredo efetivos; o GET da instância mostra os próprios. `single_url_enabled` usa a URL única. `received` ≠ `delivery` ≠ `message_status`; filtros podem descartar eventos e mensagens próprias exigem `notify_sent_by_me`.
 2. O endpoint responde `2xx` em < 10 s? Falhas são reentregues em `10s, 1m, 10m, 1h, 6h` e depois descartadas. Painel › instância › **Logs de webhook** mostra status HTTP, duração e erro de cada tentativa, com reenvio manual.
-3. Está respondendo `401` porque a verificação de assinatura falha? Causas: corpo re-serializado em vez do cru; segredo de outra instância; segredo rotacionado (entregas antigas usam o anterior); relógio do servidor fora (> 5 min). Teste com `../integrate-wabox/scripts/verify-signature.ts` passando o corpo e header exatos do log.
+3. Está respondendo `401` porque a assinatura falha? Confira corpo cru, segredo efetivo (workspace × instância), rotação e relógio (> 5 min). Capture corpo/header originais no receptor de teste: o log do painel pode truncar o payload e não traz a assinatura original, então não serve como fixture HMAC completa. Mantenha o segredo anterior durante toda a janela de retry (~7 h 11 min + margem).
 4. Para isolar o seu servidor: suba `../integrate-wabox/scripts/webhook-sink.ts` num túnel e aponte a instância para ele. Se chega no sink e não no seu servidor, o problema é seu endpoint (firewall, HTTPS inválido, redirect, body parser).
 5. `event_id` repetido = reentrega (o seu endpoint demorou ou falhou antes); deduplique.
 
@@ -51,13 +51,13 @@ Celular precisa existir e abrir o WhatsApp de tempos em tempos (é linked device
 | `401 instance_not_found` | token rotacionado no painel, ou `instance_id`/`token` trocados na URL |
 | `401 client_token_required` | workspace ativou Client-Token e a integração não envia o header |
 | `403 ip_not_allowed` | allowlist de IPs do workspace não inclui o IP de saída (NAT, cloud com IP dinâmico) |
-| `402 subscription_required` | trial ou plano da conta venceu (vale para todas as instâncias); só envios são bloqueados |
+| `402 subscription_required` | plano venceu: envios da API da instância e todas as rotas da Account API são bloqueados |
 | `409 instance_limit_reached` (Account API) | todos os slots do plano em uso: excluir uma instância ou aumentar o plano; `GET /account/plan` mostra o uso |
 | `403 plan_required` (Account API) | conta em trial: criar instância por API exige plano |
 | `409 instance_not_connected` | ação imediata (contatos, grupos, read, presence) com instância fora |
 | `429 queue_full` | 1.000 msgs na fila |
 | `429 rate_limited` | > 60 req/s por instância (polling agressivo de `/status` ou `/qr-code` conta) |
-| `502 action_failed` | aparelho falhou ao executar; comum no primeiro `GET /labels` após restart. Repita |
+| `502 action_failed` | aparelho falhou ao executar; leituras podem repetir, escritas exigem reconciliação |
 
 ## 5. Suspeita de banimento / entrega ruim
 

@@ -1,13 +1,13 @@
 # Endpoints mais usados (API pública)
 
-Prefixo: `https://api.wabox.me/instances/{instance_id}/token/{token}`. Header opcional `Client-Token` (obrigatório se ativado no workspace). `*` = obrigatório. Campos comuns de envio (todos opcionais): `reply_to_message_id`, `mentioned[]`, `mention_all`, `delay_message` (s), `delay_typing` (s, máx. 15).
+Prefixo: `https://api.wabox.me/instances/{instance_id}/token/{token}`. Header opcional `Client-Token` (obrigatório se ativado no workspace). `*` = obrigatório. Mensagens comuns aceitam `reply_to_message_id`, `mentioned[]`, `mention_all`, `delay_message` e `delay_typing` (s, 0–15); ações como reação, pin e exclusão têm campos próprios — confira o OpenAPI.
 
 ## Instância
 
 | Rota | Body / retorno |
 | --- | --- |
 | `GET /status` | `{ connected, smartphone_connected, status, phone, error }` — `status`: created/starting/qr/connecting/connected/disconnected/logged_out/banned/stopped |
-| `GET /qr-code` · `GET /qr-code/image` | `{ value: "data:image/png;base64,…", expires_at, connected }` · PNG |
+| `GET /qr-code` · `GET /qr-code/image` | `{ value: "data:image/png;base64,…", expires_at, connected }` · PNG. Sem QR disponível, o GET JSON retorna `value: null` (conectada ou ainda iniciando); a UI deve tratar os dois casos |
 | `GET /phone-code/{phone}` | `{ value: "ABCD-EFGH" }` (pareamento sem câmera) |
 | `GET /me` · `GET /device` | dados do número / do aparelho |
 | `POST /restart` · `POST /disconnect` | reinicia a sessão / desloga (novo QR) |
@@ -16,7 +16,9 @@ Prefixo: `https://api.wabox.me/instances/{instance_id}/token/{token}`. Header op
 | `POST /webhooks/secret` | rotaciona o segredo HMAC e devolve o novo |
 | `GET /settings` · `PUT /settings` | `{ auto_read_message, auto_read_status, call_reject_auto, call_reject_message, disable_enqueue_when_disconnected, queue_max_age_hours, delay_message_min_ms, delay_message_max_ms, history_enabled, proxy_url }` |
 
-## Envio (`POST`, todos respondem `{ id, message_id, wabox_id, status: "queued" }`)
+## Envio e ações
+
+Envios/ações enfileirados respondem `{ id, message_id, wabox_id, status: "queued" }` (`id` = alias de `message_id`). Exceções imediatas: `read-message` responde `{ value: true, read: [...] }` e `send-presence` responde `{ value: true }`. Para editar/reagir/revogar/fixar, `message_id` é o ID alvo; correlacione a operação pelo `wabox_id`.
 
 | Rota | Body |
 | --- | --- |
@@ -29,12 +31,12 @@ Prefixo: `https://api.wabox.me/instances/{instance_id}/token/{token}`. Header op
 | `/send-contact` · `/send-contacts` | `{ phone*, contact_name*, contact_phone*, contact_description?, vcard? }` · `{ phone*, contacts*[] }` |
 | `/send-link` | `{ phone*, message*, url*, title?, description?, image? }` |
 | `/send-poll` · `/send-poll-vote` | `{ phone*, question*, options*[], poll_max_options? }` · `{ phone*, poll_message_id*, options*[] }` |
-| `/send-reaction` · `/remove-reaction` | `{ phone*, message_id*, reaction* }` |
+| `/send-reaction` · `/remove-reaction` | enviar: `{ phone*, message_id*, reaction*, from_me?, participant? }`; remover: `{ phone*, message_id*, from_me?, participant? }` |
 | `/forward-message` | `{ phone*, message_id*, from_phone? }` |
-| `/pin-message` | `{ phone*, message_id*, pin_duration? }` |
-| `/read-message` | `{ phone*, message_id? | message_ids?[] }` (imediato, exige conectado) |
+| `/pin-message` | `{ phone*, message_id*, pin?, duration_seconds?, from_me?, participant? }`; duração: 86400, 604800 (padrão), 2592000 |
+| `/read-message` | `{ phone*, message_id? | message_ids?[], participant? }`; exige pelo menos um ID, até 100 no lote (imediato, exige conectado) |
 | `/send-presence` | `{ phone?, status*: COMPOSING|RECORDING|PAUSED|AVAILABLE|UNAVAILABLE }` (imediato) |
-| `DELETE /messages` | `{ phone*, message_id*, owner? }` (revogar) |
+| `DELETE /messages` | `{ phone*, message_id*, owner?, participant? }` (revogar, enfileirado; query ou body) |
 | `/send-button-list` | `{ phone*, message*, title?, footer?, image?, buttons*[{ id, label, type: reply|url|call|copy, url?, phone?, copy_code? }] }` — best effort |
 | `/send-option-list` | `{ phone*, message*, button_label*, title?, footer?, sections[{ title, rows[{ id, title, description }] }] | options[] }` — best effort |
 | `/send-carousel` · `/send-button-otp` · `/send-button-pix` · `/send-event` · `/send-text-status` · `/send-image-status` | ver OpenAPI (best effort / status) |

@@ -1,5 +1,7 @@
 /**
  * Servidor local para receber webhooks do Wabox durante o desenvolvimento.
+ * Apenas dados/canais de teste: guarda em memória e expõe GET /events sem autenticação.
+ * Não é exemplo de inbox de produção; eventos somem quando o processo reinicia.
  *
  *   WABOX_WEBHOOK_SECRET=whsec_… bun webhook-sink.ts [porta=8787]
  *   (Node ≥ 22: node --experimental-strip-types webhook-sink.ts)

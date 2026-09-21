@@ -9,8 +9,10 @@
  *   if (!verifyWaboxSignature(getenv('WABOX_WEBHOOK_SECRET'), $_SERVER['HTTP_X_WABOX_SIGNATURE'] ?? '', $raw)) {
  *       http_response_code(401); exit;
  *   }
- *   http_response_code(200);           // responda antes de processar
  *   $event = json_decode($raw, true);
+ *   // Valide envelope/tenant e persista em inbox durável com deduplicação.
+ *   // Se não conseguir persistir, responda 5xx para permitir reentrega.
+ *   http_response_code(200);           // o worker processa o evento já salvo
  *
  * Laravel: use $request->getContent() (não $request->all()) para o corpo cru.
  */
