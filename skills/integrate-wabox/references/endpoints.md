@@ -12,7 +12,7 @@ Prefixo: `https://api.wabox.me/instances/{instance_id}/token/{token}`. O token n
 | `GET /me` · `GET /device` | dados do número / do aparelho |
 | `POST /restart` · `POST /disconnect` | reinicia a sessão / desloga (novo QR) |
 | `PUT /name` | `{ value* }` |
-| `GET /webhooks` · `PUT /webhooks` · `PUT /webhooks/{type}` | `{ received_url, delivery_url, message_status_url, connected_url, disconnected_url, chat_presence_url, single_url_enabled, single_url, notify_sent_by_me, ignore_groups, ignore_private, ignore_text, ignore_image, ignore_video, ignore_audio, ignore_document, ignore_*_callback, use_workspace_webhooks }`; `single_url_enabled: true` manda tudo para `single_url`; `use_workspace_webhooks: true` (padrão em instância nova) herda URLs/filtros do workspace — definir uma URL desliga; `GET` inclui `secret` |
+| `GET /webhooks` · `PUT /webhooks` · `PUT /webhooks/{type}` | `{ received_url, delivery_url, message_status_url, instance_status_url, chat_presence_url, single_url_enabled, single_url, notify_sent_by_me, ignore_groups, ignore_private, ignore_text, ignore_image, ignore_video, ignore_audio, ignore_document, ignore_*_callback, use_workspace_webhooks }`; `single_url_enabled: true` manda tudo para `single_url`; `use_workspace_webhooks: true` (padrão em instância nova) herda URLs/filtros do workspace — definir uma URL desliga; `GET` inclui `secret` |
 | `POST /webhooks/secret` | rotaciona o segredo HMAC e devolve o novo |
 | `GET /settings` · `PUT /settings` | `{ auto_read_message, auto_read_status, call_reject_auto, call_reject_message, disable_enqueue_when_disconnected, queue_max_age_hours, delay_message_min_ms, delay_message_max_ms, history_enabled, proxy_url }` |
 

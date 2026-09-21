@@ -11,7 +11,7 @@
  * - GET  /health       → ok
  *
  * Exponha com `ngrok http 8787` ou `cloudflared tunnel --url http://localhost:8787` e configure:
- *   wabox.sh PUT webhooks '{"received_url":"https://<túnel>/received","delivery_url":"https://<túnel>/delivery","message_status_url":"https://<túnel>/status","connected_url":"https://<túnel>/connected","disconnected_url":"https://<túnel>/disconnected"}'
+ *   wabox.sh PUT webhooks '{"received_url":"https://<túnel>/received","delivery_url":"https://<túnel>/delivery","message_status_url":"https://<túnel>/status","instance_status_url":"https://<túnel>/instance-status"}'
  */
 import { createServer } from "node:http";
 import { verifyWaboxSignature } from "./verify-signature.ts";

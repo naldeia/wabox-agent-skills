@@ -72,7 +72,7 @@ Comece pelos fatos: **status da instância → resposta HTTP da chamada → webh
 
 ## 5. Suspeita de banimento / entrega ruim
 
-Sinais: `delivery.error_code = shadow_ban`; muitas mensagens paradas em `SENT`; queda brusca de respostas; `disconnected{reason: banned}`.
+Sinais: `delivery.error_code = shadow_ban`; muitas mensagens paradas em `SENT`; queda brusca de respostas; `instance_status{status: banned}`.
 
 Ações: parar campanhas, deixar o número descansar dias, aumentar `delay_message_min_ms/max_ms` (`PUT /settings`, ex. 2000–6000), ligar `delay_typing`, só enviar para quem respondeu/opt-in, conferir números com `phone-exists-batch`, variar o texto, evitar links encurtados. Número novo: aquecer por dias antes de volume. Campanha fria em volume é caso para a API oficial, não para linked device.
 

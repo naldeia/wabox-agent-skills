@@ -70,14 +70,13 @@ Só para envios pela API. Significa envio concluído (ou falhou), não entrega a
 
 Estados: `PENDING`, `SENT`, `RECEIVED`, `READ`, `READ_BY_ME`, `PLAYED`. Processe cada ID de `ids[]`; `phone_device` é número. `READ_BY_ME` indica leitura pelo próprio número, não pelo destinatário. Em grupos pode haver `participant_phone`: preserve recibos por participante. Recibos podem chegar antes do `delivery` ou da resposta HTTP; guarde-os para reconciliação e não regrida um estado confirmado por causa de um evento atrasado.
 
-## `connected` / `disconnected`
+## `instance_status`
 
 ```text
-{ "type": "connected", "phone": "5511999998888", "connected": true, … }
-{ "type": "disconnected", "disconnected": true, "error": "…", "reason": "network|stream_replaced|logged_out|banned|stopped|engine_shutdown|unknown", … }
+{ "type": "instance_status", "status": "starting|qr|connecting|connected|disconnected|logged_out|banned|stopped", "previous_status": "…", "phone": "5511999998888", "disconnect_reason": "network|stream_replaced|logged_out|banned|stopped|engine_shutdown|unknown", "reason": "…", … }
 ```
 
-`logged_out` = precisa de novo QR. `banned` = suspenda envios e investigue com suporte; o evento não garante se o bloqueio é permanente. Em quedas temporárias, o Wabox cuida da reconexão. `stream_replaced` = outra sessão assumiu a credencial; investigue se repetir. `stopped` = instância parada: confira `GET /status` e retome conforme a operação desejada. Não dispare `POST /restart` automático a cada evento de desconexão. Use `momment` e reconciliação de status para que eventos antigos não derrubem um canal já reconectado.
+O único webhook de conexão (substituiu `connected`/`disconnected`; `connected_url`/`disconnected_url` não existem mais): um evento por mudança de status, o mesmo `status` de `GET /status`. `previous_status`, `phone` (só em `connected`), `disconnect_reason` (só quando a mudança veio de uma queda) e `reason` (texto livre, só para log) são opcionais. `qr` = aguardando leitura: comece a mostrar `GET /qr-code` — **o código nunca vem no webhook** e não há um evento por QR gerado. `connected` = libere o canal. `logged_out` = precisa de novo QR. `banned` = suspenda envios e investigue com suporte; o evento não garante se o bloqueio é permanente. `disconnected` = queda temporária (`network`, `stream_replaced`, `engine_shutdown`, `unknown`): o Wabox cuida da reconexão; `stream_replaced` repetido = outra sessão assumiu a credencial, investigue. `stopped` = instância parada: confira `GET /status` e retome conforme a operação desejada. Não dispare `POST /restart` automático a cada queda. Use `momment` e reconciliação de status para que eventos antigos não derrubem um canal já reconectado. Configure com `instance_status_url` (ou a URL única) e silencie com `ignore_instance_status_callback`.
 
 ## `chat_presence`
 

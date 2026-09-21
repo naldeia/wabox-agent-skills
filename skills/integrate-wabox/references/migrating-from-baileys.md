@@ -26,8 +26,8 @@ Converta os JIDs guardados uma vez (função `jidToPhone`) em vez de espalhar `r
 | Baileys | Wabox |
 | --- | --- |
 | `connection.update { qr }` | `GET /qr-code` (data URL PNG pronta; rotaciona ~20 s) · `requestPairingCode` → `GET /phone-code/{phone}` |
-| `connection.update { connection: "open" }` | webhook `connected` |
-| `connection.update { connection: "close", lastDisconnect }` | webhook `disconnected` com `reason`: `logged_out` (= `DisconnectReason.loggedOut`, novo QR), `banned`, `stream_replaced` (= `connectionReplaced`), `network`/`engine_shutdown`/`unknown` (reconecta sozinho — **apague a sua lógica de reconexão**) |
+| `connection.update { connection: "open" }` | webhook `instance_status` com `status: "connected"` (traz `phone`) |
+| `connection.update { connection: "close", lastDisconnect }` | webhook `instance_status` com `disconnect_reason`: `logged_out` (= `DisconnectReason.loggedOut`, novo QR), `banned`, `stream_replaced` (= `connectionReplaced`), `network`/`engine_shutdown`/`unknown` (reconecta sozinho — **apague a sua lógica de reconexão**) |
 | `creds.update` | nada — o Wabox guarda a sessão |
 | `messages.upsert` (type `notify`) | webhook `received`. Mensagens do próprio número (`fromMe`) só com `notify_sent_by_me: true`; `from_api` separa o que saiu pela API do que foi digitado no celular |
 | `message.conversation` / `extendedTextMessage` | `text.message` |
