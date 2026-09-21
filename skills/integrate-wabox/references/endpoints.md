@@ -1,6 +1,6 @@
 # Endpoints mais usados (API pública)
 
-Prefixo: `https://api.wabox.me/instances/{instance_id}/token/{token}`. Header opcional `Client-Token` (obrigatório se ativado no workspace). `*` = obrigatório. Mensagens comuns aceitam `reply_to_message_id`, `mentioned[]`, `mention_all`, `delay_message` e `delay_typing` (s, 0–15); ações como reação, pin e exclusão têm campos próprios — confira o OpenAPI.
+Prefixo: `https://api.wabox.me/instances/{instance_id}/token/{token}`. O token na URL é a credencial base; nenhum header é necessário por padrão. Se o workspace liga "Exigir API key nas rotas de instância", envie `Authorization: Bearer wbx_key_…` (API key do workspace com `instances:operate`; o header `Client-Token` com a mesma key é aceito como alias de compatibilidade z-api). `*` = obrigatório. Mensagens comuns aceitam `reply_to_message_id`, `mentioned[]`, `mention_all`, `delay_message` e `delay_typing` (s, 0–15); ações como reação, pin e exclusão têm campos próprios — confira o OpenAPI.
 
 ## Instância
 

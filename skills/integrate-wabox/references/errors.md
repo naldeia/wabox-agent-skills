@@ -9,9 +9,10 @@ Formato: `{ "error": { "code": "…", "message": "…", "details"? } }`. `code` 
 | 400 | `invalid_request` | Body inválido; `details.issues[{ path, message }]`. Comum: `phone` com `+`/espaços, `message` vazio, base64 com prefixo errado, `delay_typing` > 15 |
 | 400 | `invite_link_invalid` | Link de convite de grupo inválido |
 | 401 | `unauthorized` / `instance_not_found` | Sem credenciais na URL / instância ou token errados (não diz qual) |
-| 401 | `client_token_required` | Header `Client-Token` ausente ou inválido |
+| 401 | `api_key_required` | API key do workspace ausente ou inválida (revogada, de outro workspace). Rotas de instância: só quando o workspace liga "Exigir API key nas rotas de instância" — `Authorization: Bearer wbx_key_…` ou a mesma key no header `Client-Token`. Account API: sempre, e só `Authorization: Bearer`. Antes de 2026-09-21: `client_token_required` / `account_token_required` |
+| 403 | `insufficient_scope` | Key válida sem a permissão da rota; `details.required_scope` diz qual (`instances:operate` nas rotas de instância; `instances:read`/`instances:write`/`webhooks:read`/`webhooks:write` na Account API). Edite as permissões da key em Segurança › API keys |
 | 402 | `subscription_required` | Trial/plano vencido: envios na API da instância; todas as rotas na Account API |
-| 401 / 403 / 409 | `account_token_required` / `plan_required` / `instance_limit_reached` | Só na Account API (`/account/*`): token inválido / conta em trial / todos os slots do plano em uso |
+| 403 / 409 | `plan_required` / `instance_limit_reached` | Só na Account API (`/account/*`): conta em trial / todos os slots do plano em uso |
 | 403 | `ip_not_allowed` | IP fora da allowlist do workspace |
 | 403 | `workspace_suspended` / `group_suspended` | Workspace suspenso pelo Wabox (fale com o suporte) / grupo suspenso pelo WhatsApp |
 | 404 | `chat_not_found`, `group_not_found`, `newsletter_not_found`, `product_not_found`, `label_not_found`, `order_not_found`, `message_not_found` | |
@@ -36,7 +37,7 @@ Formato: `{ "error": { "code": "…", "message": "…", "details"? } }`. `code` 
 | `5xx`, timeout, falha de rede em envio/criação/ação | Não automaticamente: resultado pode ser desconhecido. Reconcilie primeiro; ausência na fila não prova falha de envio |
 | `409 instance_starting` | Sim, em segundos |
 | `409 instance_not_connected` / `queue_full` | Depois, quando `GET /status` = `connected` / fila esvaziar |
-| `400`, `401`, `402`, `403`, `404` | Não — o resultado será o mesmo |
+| `400`, `401`, `402`, `403`, `404` | Não — o resultado será o mesmo até corrigir a causa (credencial, permissão da key, plano, allowlist) |
 
 Não há `Idempotency-Key` para envio ou criação de instância. Persista uma operação local antes da chamada e serialize tentativas da mesma operação. Sem a resposta, pode faltar o `wabox_id`/`message_id`; mensagens parecidas por telefone/texto/horário não são prova suficiente de correlação. Mantenha resultado inconclusivo para revisão em vez de arriscar duplicação. Mesmo com resposta `queued`, acompanhe `delivery` para saber o resultado final.
 

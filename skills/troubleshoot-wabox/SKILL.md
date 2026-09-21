@@ -1,11 +1,11 @@
 ---
 name: troubleshoot-wabox
-description: Diagnostica problemas com a API de WhatsApp do Wabox — mensagem "não chegou", webhook que não dispara, instância que cai ou pede QR de novo, erros 401/402/409/429, error_code no delivery (phone_not_on_whatsapp, message_not_found, send_timeout, shadow_ban), suspeita de banimento. Use quando o usuário relatar que algo do Wabox parou de funcionar ou pedir para investigar logs/entregas.
+description: Diagnostica problemas com a API de WhatsApp do Wabox — mensagem "não chegou", webhook que não dispara, instância que cai ou pede QR de novo, erros 401/402/403/409/429 (api_key_required, insufficient_scope, antigos client_token_required/account_token_required), error_code no delivery (phone_not_on_whatsapp, message_not_found, send_timeout, shadow_ban), suspeita de banimento. Use quando o usuário relatar que algo do Wabox parou de funcionar ou pedir para investigar logs/entregas.
 ---
 
 # Diagnosticar o Wabox
 
-Comece pelos fatos: **status da instância → resposta HTTP da chamada → webhook `delivery` → recibos `message_status` → logs de webhook no painel**. Instale também `integrate-wabox` e use `../integrate-wabox/scripts/wabox.sh` para consultar (`WABOX_INSTANCE_ID`/`WABOX_TOKEN`). Diagnóstico começa por leituras; restart, reenvio, troca de webhook e exclusão alteram a operação e devem estar no escopo autorizado. Não redirecione webhooks de clientes reais para um sink de teste.
+Comece pelos fatos: **status da instância → resposta HTTP da chamada → webhook `delivery` → recibos `message_status` → logs de webhook no painel**. Instale também `integrate-wabox` e use `../integrate-wabox/scripts/wabox.sh` para consultar (`WABOX_INSTANCE_ID`/`WABOX_TOKEN`, mais `WABOX_API_KEY` se o workspace exige API key). Diagnóstico começa por leituras; restart, reenvio, troca de webhook e exclusão alteram a operação e devem estar no escopo autorizado. Não redirecione webhooks de clientes reais para um sink de teste.
 
 ## 1. A instância está conectada?
 
@@ -49,7 +49,9 @@ Comece pelos fatos: **status da instância → resposta HTTP da chamada → webh
 | Sintoma | Causa provável |
 | --- | --- |
 | `401 instance_not_found` | token rotacionado no painel, ou `instance_id`/`token` trocados na URL |
-| `401 client_token_required` | workspace ativou Client-Token e a integração não envia o header |
+| `401 api_key_required` (rotas de instância) | workspace ligou "Exigir API key nas rotas de instância" e a chamada não traz uma key válida: header ausente, key revogada, digitada errado ou **de outro workspace**. Envie `Authorization: Bearer wbx_key_…` (ou a mesma key no header `Client-Token`, alias z-api) |
+| `401 api_key_required` (Account API) | `/account/*` sempre exige key, e **só** em `Authorization: Bearer` (`Client-Token` não vale aqui). Integração ainda mandando `Account-Token: act_…`? Esses valores deixaram de funcionar: crie uma API key com as permissões necessárias |
+| `403 insufficient_scope` | a key é válida, mas não tem a permissão da rota. Leia `error.details.required_scope` (`instances:operate` nas rotas de instância; `instances:read`/`instances:write`/`webhooks:read`/`webhooks:write` na Account API) e **edite as permissões da key** em Segurança › API keys — não precisa criar outra |
 | `403 ip_not_allowed` | allowlist de IPs do workspace não inclui o IP de saída (NAT, cloud com IP dinâmico) |
 | `402 subscription_required` | plano venceu: envios da API da instância e todas as rotas da Account API são bloqueados |
 | `409 instance_limit_reached` (Account API) | todos os slots do plano em uso: excluir uma instância ou aumentar o plano; `GET /account/plan` mostra o uso |
@@ -58,6 +60,15 @@ Comece pelos fatos: **status da instância → resposta HTTP da chamada → webh
 | `429 queue_full` | 1.000 msgs na fila |
 | `429 rate_limited` | > 60 req/s por instância (polling agressivo de `/status` ou `/qr-code` conta) |
 | `502 action_failed` | aparelho falhou ao executar; leituras podem repetir, escritas exigem reconciliação |
+
+### 401/403 de credencial: como isolar
+
+1. Qual credencial falhou? `instance_not_found` = `instance_id`/`token` da URL; `api_key_required`/`insufficient_scope` = API key do workspace (`wbx_key_` + 48 hex). O token da URL não mudou e continua sendo a credencial base das rotas de instância.
+2. `api_key_required` numa rota de instância só aparece com a exigência ligada. Confira em Segurança › API keys se a key ainda existe (a lista mostra a dica `wbx_key_3f9a…c2e1`, as permissões e o **último uso** — útil para saber se a key que o backend usa é a que você imagina). Teste com `WABOX_API_KEY=… wabox.sh GET status`.
+3. `insufficient_scope` → acrescente `details.required_scope` à key existente; a mudança vale na hora, sem redeploy.
+4. Parou logo após uma rotação? Revogar é imediato. Rotação sem downtime = criar a key nova → publicar → revogar a antiga.
+5. MCP (`/mcp`) com o token da instância em `Authorization: Bearer`: como o `Authorization` já está ocupado, a API key vai no header `Client-Token`. Conexões por OAuth ficam isentas da exigência de key e da allowlist de IPs.
+6. Códigos legados, **antes de 2026-09-21**: `401 client_token_required` e `401 account_token_required` — ambos viraram `api_key_required`. Client-Tokens daquela época foram migrados para a key "Client-Token (migrado)" (`instances:operate`) e continuam válidos no header `Client-Token`; `Account-Token` não foi migrado.
 
 ## 5. Suspeita de banimento / entrega ruim
 
@@ -71,4 +82,4 @@ Botões/lista/carrossel, catálogo/business e etiquetas usam formatos internos d
 
 ## 7. O que mandar para o suporte
 
-`instance_id`, rota chamada, `wabox_id`/`message_id` da resposta, status HTTP + `error.code`, `event_id` do webhook e horário (UTC). Nunca o `token`.
+`instance_id`, rota chamada, `wabox_id`/`message_id` da resposta, status HTTP + `error.code` (e `error.details`), `event_id` do webhook e horário (UTC). Nunca o `token` nem a API key — no máximo a dica exibida no painel (`wbx_key_3f9a…c2e1`).

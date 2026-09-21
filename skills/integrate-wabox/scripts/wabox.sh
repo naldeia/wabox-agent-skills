@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Mini CLI da API pública do Wabox (curl + jq opcional).
 #
-#   export WABOX_INSTANCE_ID=… WABOX_TOKEN=…   [WABOX_API_URL=https://api.wabox.me] [WABOX_CLIENT_TOKEN=…]
+#   export WABOX_INSTANCE_ID=… WABOX_TOKEN=…   [WABOX_API_URL=https://api.wabox.me] [WABOX_API_KEY=wbx_key_…]
+#   WABOX_API_KEY: só se o workspace exige API key nas rotas de instância (permissão instances:operate).
+#   Legado: sem WABOX_API_KEY, WABOX_CLIENT_TOKEN vai no header Client-Token (alias z-api; aceita a mesma key).
 #   wabox.sh GET  status
 #   wabox.sh GET  'queue?page=1&page_size=20'
 #   wabox.sh POST send-text '{"phone":"5511988887777","message":"oi"}'
@@ -14,7 +16,7 @@ set -euo pipefail
 
 method="${1:-}"; path="${2:-}"; body="${3:-}"
 if [[ -z "$method" || -z "$path" ]]; then
-  sed -n '2,12p' "$0" >&2; exit 2
+  sed -n '2,14p' "$0" >&2; exit 2
 fi
 : "${WABOX_INSTANCE_ID:?defina WABOX_INSTANCE_ID}" "${WABOX_TOKEN:?defina WABOX_TOKEN}"
 base="${WABOX_API_URL:-https://api.wabox.me}/instances/${WABOX_INSTANCE_ID}/token/${WABOX_TOKEN}"
@@ -27,7 +29,11 @@ if [[ "$path" == "qr-code/image" || "$path" == "/qr-code/image" ]]; then
 else
   args+=(-H 'Accept: application/json')
 fi
-[[ -n "${WABOX_CLIENT_TOKEN:-}" ]] && args+=(-H "Client-Token: ${WABOX_CLIENT_TOKEN}")
+if [[ -n "${WABOX_API_KEY:-}" ]]; then
+  args+=(-H "Authorization: Bearer ${WABOX_API_KEY}")
+elif [[ -n "${WABOX_CLIENT_TOKEN:-}" ]]; then
+  args+=(-H "Client-Token: ${WABOX_CLIENT_TOKEN}")
+fi
 [[ -n "$body" ]] && args+=(-H 'Content-Type: application/json' --data "$body")
 
 code="$(curl "${args[@]}" "${base}/${path#/}")"
