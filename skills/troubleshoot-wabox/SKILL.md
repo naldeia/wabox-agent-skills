@@ -51,7 +51,9 @@ Celular precisa existir e abrir o WhatsApp de tempos em tempos (é linked device
 | `401 instance_not_found` | token rotacionado no painel, ou `instance_id`/`token` trocados na URL |
 | `401 client_token_required` | workspace ativou Client-Token e a integração não envia o header |
 | `403 ip_not_allowed` | allowlist de IPs do workspace não inclui o IP de saída (NAT, cloud com IP dinâmico) |
-| `402 subscription_required` | trial venceu; só envios são bloqueados |
+| `402 subscription_required` | trial ou plano da conta venceu (vale para todas as instâncias); só envios são bloqueados |
+| `409 instance_limit_reached` (Account API) | todos os slots do plano em uso: excluir uma instância ou aumentar o plano; `GET /account/plan` mostra o uso |
+| `403 plan_required` (Account API) | conta em trial: criar instância por API exige plano |
 | `409 instance_not_connected` | ação imediata (contatos, grupos, read, presence) com instância fora |
 | `429 queue_full` | 1.000 msgs na fila |
 | `429 rate_limited` | > 60 req/s por instância (polling agressivo de `/status` ou `/qr-code` conta) |

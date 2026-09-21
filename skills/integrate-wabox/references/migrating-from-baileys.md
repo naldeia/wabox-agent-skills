@@ -1,6 +1,6 @@
 # Migrando de Baileys para o Wabox
 
-Para quem hoje mantém um socket Baileys (ou whatsapp-web.js) por número dentro do próprio backend e vai trocar por chamadas REST + webhooks. A mudança de arquitetura: **some o processo com socket/estado de auth**; entra um cliente HTTP (envio) e um endpoint HTTP (recebimento). Integrador com muitos números: crie as instâncias pela Partner API (skill `wabox-partner`).
+Para quem hoje mantém um socket Baileys (ou whatsapp-web.js) por número dentro do próprio backend e vai trocar por chamadas REST + webhooks. A mudança de arquitetura: **some o processo com socket/estado de auth**; entra um cliente HTTP (envio) e um endpoint HTTP (recebimento). Integrador com muitos números: crie as instâncias pela Account API (skill `wabox-partner`).
 
 ## O que não migra
 
@@ -56,7 +56,7 @@ Converta os JIDs guardados uma vez (função `jidToPhone`) em vez de espalhar `r
 | `sock.profilePictureUrl(jid)` | `GET /contacts/{phone}/picture` |
 | `sock.groupMetadata` · `groupCreate` · `groupParticipantsUpdate` · `groupInviteCode` | `GET /groups/{id}` · `POST /groups` · `POST /groups/{id}/participants` · `GET /groups/{id}/invite-link` |
 | `sock.updateBlockStatus` · `chatModify` | `/contacts/{phone}/block|unblock` · `/chats/{phone}/{archive|mute|pin|read|delete…}` |
-| `sock.logout()` | `POST /disconnect` (Partner: `DELETE /partner/instances/{id}` ao cancelar o canal) |
+| `sock.logout()` | `POST /disconnect` (Account API: `DELETE /account/instances/{id}` ao cancelar o canal, o que libera o slot) |
 
 ## Diferenças de comportamento que quebram código portado
 

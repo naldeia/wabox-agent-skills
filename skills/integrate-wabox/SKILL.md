@@ -38,7 +38,7 @@ Veja `references/endpoints.md` (rotas e bodies), `references/webhooks.md` (paylo
 - Botões/lista/carrossel são **best effort**: renderizam no celular, **não** no WhatsApp Web/Desktop. Tenha fallback em texto.
 - Rate limit por instância: 60 req/s (rajada 120) → `429` + `Retry-After`. O gargalo real é o intervalo anti-ban da fila (1–3 s entre mensagens).
 - Grupos: em `received`, `phone` é o grupo e `participant_phone` quem escreveu. Guarde `chat_lid`/`sender_lid` junto com `phone` (WhatsApp está migrando para LID).
-- `402 subscription_required` só em endpoints de envio (trial vencido). Leitura, status e webhooks continuam.
+- `402 subscription_required` só em endpoints de envio (trial ou plano da conta vencido — a assinatura é da conta, por slots, igual para todas as instâncias). Leitura, status e webhooks continuam.
 
 ## Scripts
 

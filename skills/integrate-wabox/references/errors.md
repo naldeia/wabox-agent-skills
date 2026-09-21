@@ -10,7 +10,8 @@ Formato: `{ "error": { "code": "…", "message": "…", "details"? } }`. `code` 
 | 400 | `invite_link_invalid` | Link de convite de grupo inválido |
 | 401 | `unauthorized` / `instance_not_found` | Sem credenciais na URL / instância ou token errados (não diz qual) |
 | 401 | `client_token_required` | Header `Client-Token` ausente ou inválido |
-| 402 | `subscription_required` | Trial vencido ou assinatura inativa — só em envios |
+| 402 | `subscription_required` | Trial ou plano da conta vencido — só em envios |
+| 401 / 403 / 409 | `account_token_required` / `plan_required` / `instance_limit_reached` | Só na Account API (`/account/*`): token inválido / conta em trial / todos os slots do plano em uso |
 | 403 | `ip_not_allowed` | IP fora da allowlist do workspace |
 | 403 | `workspace_suspended` / `group_suspended` | Workspace suspenso pelo Wabox (fale com o suporte) / grupo suspenso pelo WhatsApp |
 | 404 | `chat_not_found`, `group_not_found`, `newsletter_not_found`, `product_not_found`, `label_not_found`, `order_not_found`, `message_not_found` | |
