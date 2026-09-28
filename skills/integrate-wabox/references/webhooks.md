@@ -54,11 +54,11 @@ Notas: `waiting_message: true` é placeholder (o definitivo vem depois com o mes
 
 ```json
 { "type": "delivery", "event_id": "…", "instance_id": "…", "momment": 1786968420000,
-  "wabox_id": "wbx_…", "message_id": "3EB0…", "phone": "5511988887777",
+  "operation": "send", "wabox_id": "wbx_…", "message_id": "3EB0…", "phone": "5511988887777",
   "error": "phone is not on WhatsApp", "error_code": "phone_not_on_whatsapp" }
 ```
 
-Só para envios pela API. Significa envio concluído (ou falhou), não entrega ao destinatário. `error`/`error_code` só em falha; `message_id` é opcional. Correlacione a operação por `wabox_id`, inclusive para ações sobre uma mensagem existente.
+Só para envios e ações pela API. Significa envio concluído (ou falhou), não entrega ao destinatário. `error`/`error_code` só em falha. `message_id` é o mesmo da resposta HTTP: o da mensagem nova ou, em ações, o da mensagem referenciada. `operation` (`send`, `edit`, `delete`, `reaction`, `remove_reaction`, `pin`, `unpin`, `poll_vote`, `event_response`) diz o que foi feito: **só `operation: "send"` com `error_code` é erro de envio**; nas outras, a ação falhou e a mensagem referenciada continua como estava. `wabox_id` também correlaciona com a chamada original.
 
 ## `message_status`
 
