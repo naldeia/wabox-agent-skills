@@ -7,7 +7,7 @@ Prefixo: `https://api.wabox.me/instances/{instance_id}/token/{token}`. O token n
 | Rota | Body / retorno |
 | --- | --- |
 | `GET /status` | `{ connected, smartphone_connected, status, phone, error }` — `status`: created/starting/qr/connecting/connected/disconnected/logged_out/banned/stopped |
-| `GET /qr-code` · `GET /qr-code/image` | `{ value: "data:image/png;base64,…", expires_at, connected }` · PNG. Sem QR disponível, o GET JSON retorna `value: null` (conectada ou ainda iniciando); a UI deve tratar os dois casos |
+| `GET /qr-code` · `GET /qr-code/image` | `{ value: "data:image/png;base64,…", expires_at, connected }` · PNG. Sem QR disponível, o GET JSON retorna `value: null` (conectada ou ainda iniciando); a UI deve tratar os dois casos. O QR fica disponível por ~13 min; sem leitura o pareamento para (`disconnected` + `qr_timeout`) e o próximo GET recomeça do zero |
 | `GET /phone-code/{phone}` | `{ value: "ABCD-EFGH" }` (pareamento sem câmera) |
 | `GET /me` · `GET /device` | dados do número / do aparelho |
 | `POST /restart` · `POST /disconnect` | reinicia a sessão / desloga (novo QR) |

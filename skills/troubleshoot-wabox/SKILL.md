@@ -16,6 +16,7 @@ Comece pelos fatos: **status da instância → resposta HTTP da chamada → webh
 | `connected` | ok | siga para o passo 2 |
 | `qr` / `logged_out` | aparelho removido no celular ou nunca pareado | novo QR (`GET /qr-code`) ou `GET /phone-code/{phone}` |
 | `disconnected` / `connecting` | queda de rede ou outra sessão web assumiu; reconecta sozinha | espere; se persistir > 2 min, `POST /restart` |
+| `disconnected` nunca pareada (`instance_status` com `disconnect_reason: qr_timeout`) | o QR ficou ~13 min sem leitura e o pareamento parou (não é bug) | `GET /qr-code` recomeça o pareamento com QR novo |
 | `starting` | sessão carregando | espere segundos |
 | `banned` | bloqueio reportado pelo WhatsApp | suspenda envios e investigue com suporte; não presuma bloqueio permanente nem entre em loop de restart |
 
