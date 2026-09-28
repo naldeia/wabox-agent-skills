@@ -21,6 +21,7 @@ Formato: `{ "error": { "code": "…", "message": "…", "details"? } }`. `code` 
 | 409 | `instance_already_connected` | A operação exige sessão não conectada; `GET /qr-code` JSON usa `value: null` quando conectada |
 | 429 | `queue_full` | Fila de instância desconectada chegou a 1.000 mensagens. Espere esvaziar; não troque o canal/número de envio silenciosamente |
 | 409 | `queue_disabled_while_disconnected` | `disable_enqueue_when_disconnected` ligado e instância fora |
+| 409 | `duplicate_message_id` | `custom_message_id` já usado por mensagem na fila ou enviada desta instância. Num retry é o sinal de que o primeiro envio foi aceito (`details.wabox_id`); fora disso, gere outro id |
 | 415 / 422 | mídia | Tipo não aceito / conteúdo inválido |
 | 429 | `rate_limited` | Espere `Retry-After` (s). Headers `X-RateLimit-Limit/Remaining` em toda resposta |
 | 400 | `invalid_phone` | `phone` fora dos formatos aceitos |
@@ -39,7 +40,7 @@ Formato: `{ "error": { "code": "…", "message": "…", "details"? } }`. `code` 
 | `409 instance_not_connected` / `queue_full` | Depois, quando `GET /status` = `connected` / fila esvaziar |
 | `400`, `401`, `402`, `403`, `404` | Não — o resultado será o mesmo até corrigir a causa (credencial, permissão da key, plano, allowlist) |
 
-Não há `Idempotency-Key` para envio ou criação de instância. Persista uma operação local antes da chamada e serialize tentativas da mesma operação. Sem a resposta, pode faltar o `wabox_id`/`message_id`; mensagens parecidas por telefone/texto/horário não são prova suficiente de correlação. Mantenha resultado inconclusivo para revisão em vez de arriscar duplicação. Mesmo com resposta `queued`, acompanhe `delivery` para saber o resultado final.
+Não há `Idempotency-Key`, mas nos envios `custom_message_id` cumpre esse papel: gere o id antes da chamada, guarde-o e repita com o mesmo id — `409 duplicate_message_id` (`details.wabox_id`) significa que o primeiro já foi aceito. Sem ele (e na criação de instância), persista uma operação local antes da chamada e serialize tentativas da mesma operação. Sem a resposta, pode faltar o `wabox_id`/`message_id`; mensagens parecidas por telefone/texto/horário não são prova suficiente de correlação. Mantenha resultado inconclusivo para revisão em vez de arriscar duplicação. Mesmo com resposta `queued`, acompanhe `delivery` para saber o resultado final.
 
 ## `error_code` no webhook `delivery`
 
