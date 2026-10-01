@@ -68,7 +68,7 @@ Só para envios e ações pela API. Significa envio concluído (ou falhou), não
   "momment": 1786968420000, "is_group": false, "phone_device": 0 }
 ```
 
-Estados: `PENDING`, `SENT`, `RECEIVED`, `READ`, `READ_BY_ME`, `PLAYED`. Processe cada ID de `ids[]`; `phone_device` é número. `READ_BY_ME` indica leitura pelo próprio número, não pelo destinatário. Em grupos pode haver `participant_phone`: preserve recibos por participante. Recibos podem chegar antes do `delivery` ou da resposta HTTP; guarde-os para reconciliação e não regrida um estado confirmado por causa de um evento atrasado.
+Estados: `PENDING`, `SENT`, `RECEIVED`, `READ`, `READ_BY_ME`, `PLAYED`. Processe cada ID de `ids[]`. Há **um recibo por aparelho** do contato (`phone_device`: `0` = celular principal, `1+` = aparelho vinculado; valor é só o slot, não identifica o aparelho), cada um com `event_id` próprio: o primeiro `RECEIVED` já é ✓✓. `SENT` vem do **próprio** celular da instância (não é ack do servidor; ✓ = `delivery` sem `error`) e pode chegar depois de `RECEIVED`. `READ_BY_ME` indica leitura pelo próprio número, não pelo destinatário. Em grupos pode haver `participant_phone`: preserve recibos por participante. Recibos podem chegar antes do `delivery` ou da resposta HTTP; guarde-os para reconciliação e não regrida um estado confirmado por causa de um evento atrasado.
 
 ## `instance_status`
 

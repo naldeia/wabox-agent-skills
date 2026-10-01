@@ -27,7 +27,7 @@ Comece pelos fatos: **status da instância → resposta HTTP da chamada → webh
 1. A chamada `POST /send-*` respondeu `200 { wabox_id, status: "queued" }`? Se não, veja o erro HTTP (tabela em `../integrate-wabox/references/errors.md`).
 2. A mensagem ainda está na fila? `wabox.sh GET 'queue?page_size=50'` → se sim, instância desconectada ou fila longa (1–3 s entre mensagens; 1.000 msgs ≈ 30–50 min).
 3. Chegou `delivery` com o mesmo `wabox_id`?
-   - **sem `error_code`** → saiu do aparelho. Se o contato não recebeu, olhe `message_status`: parado em `SENT` sem `RECEIVED` = contato sem internet, bloqueou o número, ou shadow ban.
+   - **sem `error_code`** → saiu do aparelho. Se o contato não recebeu, olhe `message_status`: nenhum `RECEIVED` = contato sem internet, bloqueou o número, ou shadow ban.
    - `phone_not_on_whatsapp` → confira `GET /phone-exists/{phone}` (nono dígito, DDI).
    - `message_not_found` → encaminhamento/edição de legenda fora do cache, ou voto sem o segredo da enquete original. Não reenvie como mensagem nova automaticamente; confira a ação solicitada.
    - `media_download_failed` / `media_invalid` → URL não pública, lenta, ou acima de 16 MB/100 MB; teste a URL com `curl -I`; use base64.
@@ -73,7 +73,7 @@ Comece pelos fatos: **status da instância → resposta HTTP da chamada → webh
 
 ## 5. Suspeita de banimento / entrega ruim
 
-Sinais: `delivery.error_code = shadow_ban`; muitas mensagens paradas em `SENT`; queda brusca de respostas; `instance_status{status: banned}`.
+Sinais: `delivery.error_code = shadow_ban`; muitas mensagens com `delivery` ok e sem `RECEIVED`; queda brusca de respostas; `instance_status{status: banned}`.
 
 Ações: parar campanhas, deixar o número descansar dias, aumentar `delay_message_min_ms/max_ms` (`PUT /settings`, ex. 2000–6000), ligar `delay_typing`, só enviar para quem respondeu/opt-in, conferir números com `phone-exists-batch`, variar o texto, evitar links encurtados. Número novo: aquecer por dias antes de volume. Campanha fria em volume é caso para a API oficial, não para linked device.
 
