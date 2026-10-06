@@ -1,6 +1,6 @@
 ---
 name: troubleshoot-wabox
-description: Diagnostica problemas com a API de WhatsApp do Wabox — mensagem "não chegou", webhook que não dispara, instância que cai ou pede QR de novo, erros 401/402/403/409/429 (api_key_required, insufficient_scope, antigos client_token_required/account_token_required), error_code no delivery (phone_not_on_whatsapp, message_not_found, send_timeout, shadow_ban), suspeita de banimento. Use quando o usuário relatar que algo do Wabox parou de funcionar ou pedir para investigar logs/entregas.
+description: Diagnostica problemas com a API de WhatsApp do Wabox — mensagem "não chegou", webhook que não dispara, instância que cai ou pede QR de novo, erros 401/402/403/409/429 (api_key_required, insufficient_scope, antigos client_token_required/account_token_required), error_code no delivery (phone_not_on_whatsapp, message_not_found, send_timeout, shadow_ban), suspeita de banimento, histórico de mensagens vazio (GET /chats/{phone}/messages). Use quando o usuário relatar que algo do Wabox parou de funcionar ou pedir para investigar logs/entregas.
 ---
 
 # Diagnosticar o Wabox
@@ -77,10 +77,24 @@ Sinais: `delivery.error_code = shadow_ban`; muitas mensagens com `delivery` ok e
 
 Ações: parar campanhas, deixar o número descansar dias, aumentar `delay_message_min_ms/max_ms` (`PUT /settings`, ex. 2000–6000), ligar `delay_typing`, só enviar para quem respondeu/opt-in, conferir números com `phone-exists-batch`, variar o texto, evitar links encurtados. Número novo: aquecer por dias antes de volume. Campanha fria em volume é caso para a API oficial, não para linked device.
 
-## 6. Recursos best effort quebraram após atualização do WhatsApp
+## 6. Histórico de mensagens vazio ou incompleto
+
+`GET /chats/{phone}/messages` traz **só** as até 50 mensagens recentes por conversa que o celular envia ao parear. Não é histórico completo e não recebe mensagens novas, que chegam só por webhook.
+
+| Sintoma | Causa provável |
+| --- | --- |
+| `enabled: false` e `messages: []` | `settings.history_enabled` desligado (`GET /settings`). Religar não traz nada de volta: só um novo pareamento reenvia o histórico |
+| `enabled: true`, `messages: []`, `synced_at: null` | o celular não incluiu essa conversa no sync (sem atividade recente) ou o sync ainda está chegando. Confira o `phone` (mesmo formato de `GET /chats`: dígitos, `<id>-group`, `<lid>@lid`) |
+| Algumas conversas vazias logo após parear | o celular envia em lotes durante alguns minutos e não há webhook de fim; leia de novo depois |
+| Tudo sumiu | houve logout (pelo painel, pela API ou pelo celular) ou exclusão da instância: o histórico é apagado. Só volta pareando de novo |
+| Mensagens recentes não aparecem | esperado: depois do pareamento, o tráfego vem só por webhook |
+| Mídia sem arquivo (`download_error: "media not downloaded (history sync)"`) | esperado: o sync guarda só os metadados da mídia |
+| `503 history_not_configured` | o histórico não está habilitado neste servidor; é do lado do Wabox, encaminhe ao suporte |
+
+## 7. Recursos best effort quebraram após atualização do WhatsApp
 
 Botões/lista/carrossel, catálogo/business e etiquetas usam formatos internos do WhatsApp Web. Se pararam de funcionar de repente: (1) rode a aba **Testes** da instância no painel (envia cada tipo para um número seu e acompanha `delivery`/recibos); (2) confira o changelog em developer.wabox.me/resources/changelog; (3) use o fallback em texto enquanto isso. Botões nunca renderizam no WhatsApp Web/Desktop — isso não é bug.
 
-## 7. O que mandar para o suporte
+## 8. O que mandar para o suporte
 
 `instance_id`, rota chamada, `wabox_id`/`message_id` da resposta, status HTTP + `error.code` (e `error.details`), `event_id` do webhook e horário (UTC). Nunca o `token` nem a API key — no máximo a dica exibida no painel (`wbx_key_3f9a…c2e1`).
