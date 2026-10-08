@@ -1,29 +1,29 @@
 # Endpoints mais usados (API pública)
 
-Prefixo: `https://api.wabox.me/instances/{instance_id}/token/{token}`. O token na URL é a credencial base; nenhum header é necessário por padrão. Se o workspace liga "Exigir API key nas rotas de instância", envie `Authorization: Bearer wbx_key_…` (API key do workspace com `instances:operate`; o header `Client-Token` com a mesma key é aceito como alias de compatibilidade z-api). `*` = obrigatório. Mensagens comuns aceitam `reply_to_message_id`, `mentioned[]`, `mention_all`, `delay_message`, `delay_typing` (s, 0–15) e `custom_message_id` (id da mensagem escolhido por você, 1–128 ASCII visíveis sem espaço, único por instância — vira o `message_id`; repetido → `409 duplicate_message_id`; não combina com `edit_message_id`); ações como reação, pin e exclusão têm campos próprios — confira o OpenAPI.
+Prefixo: `https://api.wabox.me/instances/{instance_id}/token/{token}`. O token na URL é a credencial base; nenhum header é necessário por padrão. Se o workspace ativa "Exigir API key nas rotas de instância", envie `Authorization: Bearer wbx_key_…` (API key do workspace com `instances:operate`; o header `Client-Token` com a mesma key é aceito como alias de compatibilidade z-api). `*` = obrigatório. Mensagens comuns aceitam `reply_to_message_id`, `mentioned[]`, `mention_all`, `delay_message`, `delay_typing` (s, 0–15) e `custom_message_id` (id da mensagem escolhido por você, 1–128 ASCII visíveis sem espaço, único por instância; vira o `message_id`, um id repetido gera `409 duplicate_message_id` e ele não combina com `edit_message_id`). Ações como reação, pin e exclusão têm campos próprios; confira o OpenAPI.
 
 ## Instância
 
 | Rota | Body / retorno |
 | --- | --- |
-| `GET /status` | `{ connected, smartphone_connected, status, phone, error }` — `status`: created/starting/qr/connecting/connected/disconnected/logged_out/banned/stopped |
+| `GET /status` | `{ connected, smartphone_connected, status, phone, error }`; valores de `status`: created/starting/qr/connecting/connected/disconnected/logged_out/banned/stopped |
 | `GET /qr-code` · `GET /qr-code/image` | `{ value: "data:image/png;base64,…", expires_at, connected }` · PNG. Sem QR disponível, o GET JSON retorna `value: null` (conectada ou ainda iniciando); a UI deve tratar os dois casos. O QR fica disponível por ~13 min; sem leitura o pareamento para (`disconnected` + `qr_timeout`) e o próximo GET recomeça do zero |
 | `GET /phone-code/{phone}` | `{ value: "ABCD-EFGH" }` (pareamento sem câmera) |
 | `GET /me` · `GET /device` | dados do número / do aparelho |
 | `POST /restart` · `POST /disconnect` | reinicia a sessão / desloga (novo QR) |
 | `PUT /name` | `{ value* }` |
-| `GET /webhooks` · `PUT /webhooks` · `PUT /webhooks/{type}` | `{ received_url, delivery_url, message_status_url, instance_status_url, chat_presence_url, single_url_enabled, single_url, notify_sent_by_me, ignore_groups, ignore_private, ignore_text, ignore_image, ignore_video, ignore_audio, ignore_document, ignore_*_callback, use_workspace_webhooks }`; `single_url_enabled: true` manda tudo para `single_url`; `use_workspace_webhooks: true` (padrão em instância nova) herda URLs/filtros do workspace — definir uma URL desliga; `GET` inclui `secret` |
+| `GET /webhooks` · `PUT /webhooks` · `PUT /webhooks/{type}` | `{ received_url, delivery_url, message_status_url, instance_status_url, chat_presence_url, single_url_enabled, single_url, notify_sent_by_me, ignore_groups, ignore_private, ignore_text, ignore_image, ignore_video, ignore_audio, ignore_document, ignore_*_callback, use_workspace_webhooks }`; `single_url_enabled: true` manda tudo para `single_url`; `use_workspace_webhooks: true` (padrão em instância nova) herda URLs/filtros do workspace, e definir uma URL a desliga; `GET` inclui `secret` |
 | `POST /webhooks/secret` | rotaciona o segredo HMAC e devolve o novo |
 | `GET /settings` · `PUT /settings` | `{ auto_read_message, auto_read_status, call_reject_auto, call_reject_message, disable_enqueue_when_disconnected, queue_max_age_hours, delay_message_min_ms, delay_message_max_ms, history_enabled, proxy_url }` |
 
 ## Envio e ações
 
-Envios/ações enfileirados respondem `{ id, message_id, wabox_id, status: "queued" }` (`id` = alias de `message_id`). Exceções imediatas: `read-message` responde `{ value: true, read: [...] }` e `send-presence` responde `{ value: true }`. Para editar/reagir/revogar/fixar, `message_id` é o ID alvo; correlacione a operação pelo `wabox_id`.
+Envios/ações enfileirados respondem `{ id, message_id, wabox_id, status: "queued" }` (`id` é alias de `message_id`). Exceções imediatas: `read-message` responde `{ value: true, read: [...] }` e `send-presence` responde `{ value: true }`. Para editar/reagir/revogar/fixar, `message_id` é o ID alvo; correlacione a operação pelo `wabox_id`.
 
 | Rota | Body |
 | --- | --- |
 | `/send-text` | `{ phone*, message*, edit_message_id? }` |
-| `/send-image` · `/send-video` | `{ phone*, image*|video*, caption?, view_once?, edit_message_id?, mime_type?, file_name? }` — URL ou base64 |
+| `/send-image` · `/send-video` | `{ phone*, image*|video*, caption?, view_once?, edit_message_id?, mime_type?, file_name? }`; aceita URL ou base64 |
 | `/send-audio` | `{ phone*, audio*, ptt? (padrão `true` = voice note), waveform?, view_once? }` |
 | `/send-document` | `{ phone*, document*, extension? (ou `/send-document/{ext}`), caption?, file_name? }` |
 | `/send-sticker` · `/send-gif` · `/send-ptv` | `{ phone*, sticker*|gif*|ptv* }` |
@@ -37,13 +37,13 @@ Envios/ações enfileirados respondem `{ id, message_id, wabox_id, status: "queu
 | `/read-message` | `{ phone*, message_id? | message_ids?[], participant? }`; exige pelo menos um ID, até 100 no lote (imediato, exige conectado) |
 | `/send-presence` | `{ phone?, status*: COMPOSING|RECORDING|PAUSED|AVAILABLE|UNAVAILABLE }` (imediato) |
 | `DELETE /messages` | `{ phone*, message_id*, owner?, participant? }` (revogar, enfileirado; query ou body) |
-| `/send-button-list` | `{ phone*, message*, title?, footer?, image?, buttons*[{ id, label, type: reply|url|call|copy, url?, phone?, copy_code? }] }` — best effort |
-| `/send-option-list` | `{ phone*, message*, button_label*, title?, footer?, sections[{ title, rows[{ id, title, description }] }] | options[] }` — best effort |
+| `/send-button-list` | `{ phone*, message*, title?, footer?, image?, buttons*[{ id, label, type: reply|url|call|copy, url?, phone?, copy_code? }] }`; best effort |
+| `/send-option-list` | `{ phone*, message*, button_label*, title?, footer?, sections[{ title, rows[{ id, title, description }] }] | options[] }`; best effort |
 | `/send-carousel` · `/send-button-otp` · `/send-button-pix` · `/send-event` · `/send-text-status` · `/send-image-status` | ver OpenAPI (best effort / status) |
 
 ## Fila
 
-`GET /queue?page&page_size` → `{ data[{ wabox_id, message_id, phone, type, … }], page, page_size, total }` · `DELETE /queue` · `DELETE /queue/{wabox_id}`
+`GET /queue?page&page_size` retorna `{ data[{ wabox_id, message_id, phone, type, … }], page, page_size, total }`. Há também `DELETE /queue` e `DELETE /queue/{wabox_id}`.
 
 ## Contatos e chats
 
@@ -53,7 +53,7 @@ Envios/ações enfileirados respondem `{ id, message_id, wabox_id, status: "queu
 | `GET /contacts?q&page&page_size` · `GET /contacts/{phone}` · `GET /contacts/{phone}/picture?preview` | ao vivo do aparelho, nada persistido |
 | `POST /contacts/{phone}/block|unblock` · `GET /contacts/blocked` | |
 | `GET /chats?q&archived&page&page_size` · `GET /chats/{phone}` | só metadados; `404 chat_not_found` se o engine ainda não viu a conversa |
-| `GET /chats/{phone}/messages` | `{ phone, enabled, synced_at, messages[] }` — até 50 mensagens recentes do sync do pareamento, formato do `received` sem envelope, mídia só metadados (`download_error`), vazio (nunca 404) se não sincronizou; **não** acompanha mensagens ao vivo; não exige conectado; `settings.history_enabled: false` desliga e apaga |
+| `GET /chats/{phone}/messages` | `{ phone, enabled, synced_at, messages[] }`; até 50 mensagens recentes do sync do pareamento, formato do `received` sem envelope, mídia só metadados (`download_error`), vazio (nunca 404) se não sincronizou; não acompanha mensagens ao vivo; não exige conectado; `settings.history_enabled: false` desliga e apaga |
 | `POST /chats/{phone}/{archive|unarchive|mute|unmute|pin|unpin|read|unread|delete}` · `PUT /chats/{phone}/expiration { value* }` | |
 | `PUT /profile/name|about { value* }` · `PUT /profile/picture { value*, mime_type? }` · `DELETE /profile/picture` | |
 
@@ -61,13 +61,13 @@ Envios/ações enfileirados respondem `{ id, message_id, wabox_id, status: "queu
 
 | Rota | Body |
 | --- | --- |
-| `POST /groups` | `{ name*, participants*[], description?, announce?, locked?, join_approval_required?, member_add_mode?, ephemeral_seconds? }` → `{ id: "…-group" }` |
-| `GET /groups?include_participants` · `GET /groups/{id}` · `PUT /groups/{id}` | update aceita os mesmos campos + `picture`/`remove_picture` |
-| `POST /groups/{id}/participants` | `{ action*: add|remove|promote|demote|approve|reject, phones*[] }` — resultado por telefone (quem bloqueia adição recebe convite) |
+| `POST /groups` | `{ name*, participants*[], description?, announce?, locked?, join_approval_required?, member_add_mode?, ephemeral_seconds? }`; retorna `{ id: "…-group" }` |
+| `GET /groups?include_participants` · `GET /groups/{id}` · `PUT /groups/{id}` | update aceita os mesmos campos e `picture`/`remove_picture` |
+| `POST /groups/{id}/participants` | `{ action*: add|remove|promote|demote|approve|reject, phones*[] }`; o resultado vem por telefone (quem bloqueia adição recebe convite) |
 | `GET /groups/{id}/invite-link` · `POST /groups/{id}/invite-link/revoke` · `GET /groups/invite-info?invite=` · `POST /groups/join { invite* }` · `POST /groups/{id}/leave` · `GET /groups/{id}/requests` | |
 
-Comunidades (`/communities/*`), canais (`/newsletters/*`; publicar = `send-*` com `phone: <id>@newsletter`), privacidade (`/privacy/*`), business/catálogo (`/business/*`) e etiquetas (`/labels/*`): ver OpenAPI.
+Comunidades (`/communities/*`), canais (`/newsletters/*`; para publicar, use `send-*` com `phone: <id>@newsletter`), privacidade (`/privacy/*`), business/catálogo (`/business/*`) e etiquetas (`/labels/*`) estão no OpenAPI.
 
 ## Paginação
 
-`?page=1&page_size=50` → `{ data, page, page_size, total }`.
+`?page=1&page_size=50` retorna `{ data, page, page_size, total }`.

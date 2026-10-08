@@ -9,7 +9,7 @@ Formato: `{ "error": { "code": "…", "message": "…", "details"? } }`. `code` 
 | 400 | `invalid_request` | Body inválido; `details.issues[{ path, message }]`. Comum: `phone` com `+`/espaços, `message` vazio, base64 com prefixo errado, `delay_typing` > 15 |
 | 400 | `invite_link_invalid` | Link de convite de grupo inválido |
 | 401 | `unauthorized` / `instance_not_found` | Sem credenciais na URL / instância ou token errados (não diz qual) |
-| 401 | `api_key_required` | API key do workspace ausente ou inválida (revogada, de outro workspace). Rotas de instância: só quando o workspace liga "Exigir API key nas rotas de instância" — `Authorization: Bearer wbx_key_…` ou a mesma key no header `Client-Token`. Account API: sempre, e só `Authorization: Bearer`. Antes de 2026-09-21: `client_token_required` / `account_token_required` |
+| 401 | `api_key_required` | API key do workspace ausente ou inválida (revogada, de outro workspace). Rotas de instância: só quando o workspace ativa "Exigir API key nas rotas de instância"; envie `Authorization: Bearer wbx_key_…` ou a mesma key no header `Client-Token`. Account API: sempre, e só `Authorization: Bearer`. Antes de 2026-09-21: `client_token_required` / `account_token_required` |
 | 403 | `insufficient_scope` | Key válida sem a permissão da rota; `details.required_scope` diz qual (`instances:operate` nas rotas de instância; `instances:read`/`instances:write`/`webhooks:read`/`webhooks:write` na Account API). Edite as permissões da key em Segurança › API keys |
 | 402 | `subscription_required` | Trial/plano vencido: envios na API da instância; todas as rotas na Account API |
 | 403 / 409 | `plan_required` / `instance_limit_reached` | Só na Account API (`/account/*`): conta em trial / todos os slots do plano em uso |
@@ -27,7 +27,7 @@ Formato: `{ "error": { "code": "…", "message": "…", "details"? } }`. `code` 
 | 400 | `invalid_phone` | `phone` fora dos formatos aceitos |
 | 502 | `action_failed` / `send_failed` | O aparelho falhou ao executar. Leituras podem ser repetidas; escritas precisam de reconciliação antes de repetir |
 | 503 | `engine_unavailable` / `history_not_configured` | Nó do engine fora do ar (repita com backoff) / histórico não habilitado no ambiente |
-| 5xx | — | Leituras: backoff com limite. Envios/criação/ações podem já ter ocorrido; não repetir automaticamente |
+| 5xx | | Leituras: backoff com limite. Envios/criação/ações podem já ter ocorrido; não repetir automaticamente |
 
 ## Política de retry
 
@@ -37,10 +37,10 @@ Formato: `{ "error": { "code": "…", "message": "…", "details"? } }`. `code` 
 | `5xx`, timeout, falha de rede em leitura | Sim, com backoff limitado (ex.: 1, 2, 4, 8, 16 s) |
 | `5xx`, timeout, falha de rede em envio/criação/ação | Não automaticamente: resultado pode ser desconhecido. Reconcilie primeiro; ausência na fila não prova falha de envio |
 | `409 instance_starting` | Sim, em segundos |
-| `409 instance_not_connected` / `queue_full` | Depois, quando `GET /status` = `connected` / fila esvaziar |
-| `400`, `401`, `402`, `403`, `404` | Não — o resultado será o mesmo até corrigir a causa (credencial, permissão da key, plano, allowlist) |
+| `409 instance_not_connected` / `queue_full` | Depois, quando `GET /status` retornar `connected` / a fila esvaziar |
+| `400`, `401`, `402`, `403`, `404` | Não. O resultado será o mesmo até você corrigir a causa (credencial, permissão da key, plano, allowlist) |
 
-Não há `Idempotency-Key`, mas nos envios `custom_message_id` cumpre esse papel: gere o id antes da chamada, guarde-o e repita com o mesmo id — `409 duplicate_message_id` (`details.wabox_id`) significa que o primeiro já foi aceito. Sem ele (e na criação de instância), persista uma operação local antes da chamada e serialize tentativas da mesma operação. Sem a resposta, pode faltar o `wabox_id`/`message_id`; mensagens parecidas por telefone/texto/horário não são prova suficiente de correlação. Mantenha resultado inconclusivo para revisão em vez de arriscar duplicação. Mesmo com resposta `queued`, acompanhe `delivery` para saber o resultado final.
+Não há `Idempotency-Key`, mas nos envios `custom_message_id` cumpre esse papel. Gere o id antes da chamada, guarde-o e repita com o mesmo id. Um `409 duplicate_message_id` (`details.wabox_id`) significa que o primeiro já foi aceito. Sem ele (e na criação de instância), persista uma operação local antes da chamada e serialize tentativas da mesma operação. Sem a resposta, pode faltar o `wabox_id`/`message_id`; mensagens parecidas por telefone/texto/horário não são prova suficiente de correlação. Mantenha resultado inconclusivo para revisão em vez de arriscar duplicação. Mesmo com resposta `queued`, acompanhe `delivery` para saber o resultado final.
 
 ## `error_code` no webhook `delivery`
 
@@ -50,8 +50,8 @@ Não há `Idempotency-Key`, mas nos envios `custom_message_id` cumpre esse papel
 | `media_download_failed` | URL não pública/lenta. Use URL pública ou base64 |
 | `media_invalid` | Acima de 16 MB (mídia) / 100 MB (documento) ou formato não aceito (sticker precisa ser WebP sem ffmpeg) |
 | `message_not_found` | Encaminhamento/edição de legenda fora do cache, ou voto sem o segredo da enquete original. Não transforme automaticamente uma edição/reação em nova mensagem; ofereça alternativa conforme a ação |
-| `send_timeout` | Aparelho não confirmou. A mensagem **pode** ter saído — espere `message_status` antes de reenviar |
-| `shadow_ban` | WhatsApp aceita mas não entrega. **Pare os envios** e deixe o número descansar |
+| `send_timeout` | Aparelho não confirmou. A mensagem pode ter saído. Espere `message_status` antes de reenviar |
+| `shadow_ban` | WhatsApp aceita mas não entrega. Pare os envios e deixe o número descansar |
 | `not_allowed` | Contato bloqueou, grupo só para admins, etc. |
 | `instance_not_connected` | Caiu entre a fila e o envio; a mensagem volta à fila salvo config |
 | `queue_expired` | Passou de `queue_max_age_hours` (padrão 12 h) na fila sem envio. Reenviar é seguro |
