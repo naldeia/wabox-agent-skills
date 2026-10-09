@@ -80,7 +80,7 @@ Estados: `PENDING`, `SENT`, `RECEIVED`, `READ`, `READ_BY_ME`, `PLAYED`. Processe
 
 ## `chat_presence`
 
-`{ "type": "chat_presence", "phone": "…", "status": "AVAILABLE|UNAVAILABLE|COMPOSING|PAUSED|RECORDING", "last_seen": … }`
+`{ "type": "chat_presence", "phone": "…", "status": "AVAILABLE|UNAVAILABLE|COMPOSING|PAUSED|RECORDING", "last_seen": … }` — `AVAILABLE`/`UNAVAILABLE` só de contatos consultados em `GET /contacts/{phone}/presence` e com `always_online` ligado
 
 ## Filtros (em `PUT /webhooks`)
 

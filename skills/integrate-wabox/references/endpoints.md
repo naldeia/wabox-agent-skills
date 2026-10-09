@@ -51,6 +51,7 @@ Envios/ações enfileirados respondem `{ id, message_id, wabox_id, status: "queu
 | --- | --- |
 | `GET /phone-exists/{phone}` · `POST /phone-exists-batch { phones*[] }` (≤ 50) | confira antes de enviar; devolve o número canônico e `lid` |
 | `GET /contacts?q&page&page_size` · `GET /contacts/{phone}` · `GET /contacts/{phone}/picture?preview` | ao vivo do aparelho, nada persistido |
+| `GET /contacts/{phone}/presence` | `{ phone, status: AVAILABLE|UNAVAILABLE|null, last_seen, momment }`; exige `settings.always_online` (vale após `restart`); a 1ª consulta assina e espera até 3 s |
 | `POST /contacts/{phone}/block|unblock` · `GET /contacts/blocked` | |
 | `GET /chats?q&archived&page&page_size` · `GET /chats/{phone}` | só metadados; `404 chat_not_found` se o engine ainda não viu a conversa |
 | `GET /chats/{phone}/messages` | `{ phone, enabled, synced_at, messages[] }`; até 50 mensagens recentes do sync do pareamento, formato do `received` sem envelope, mídia só metadados (`download_error`), vazio (nunca 404) se não sincronizou; não acompanha mensagens ao vivo; não exige conectado; `settings.history_enabled: false` desliga e apaga |
