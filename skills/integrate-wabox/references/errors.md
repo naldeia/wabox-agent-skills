@@ -46,7 +46,7 @@ Não há `Idempotency-Key`, mas nos envios `custom_message_id` cumpre esse papel
 
 | `error_code` | O que fazer |
 | --- | --- |
-| `phone_not_on_whatsapp` | Número sem WhatsApp. Confira antes com `GET /phone-exists/{phone}` |
+| `phone_not_on_whatsapp` | Número sem WhatsApp (ou na forma errada do nono dígito). Envie com `verify_phone: true` ou confira antes com `GET /phone-exists/{phone}` |
 | `media_download_failed` | URL não pública/lenta. Use URL pública ou base64 |
 | `media_invalid` | Acima de 16 MB (mídia) / 100 MB (documento) ou formato não aceito (sticker precisa ser WebP sem ffmpeg) |
 | `message_not_found` | Encaminhamento/edição de legenda fora do cache, ou voto sem o segredo da enquete original. Não transforme automaticamente uma edição/reação em nova mensagem; ofereça alternativa conforme a ação |

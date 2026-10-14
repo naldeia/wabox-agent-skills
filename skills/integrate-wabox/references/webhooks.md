@@ -58,7 +58,7 @@ Notas: `waiting_message: true` é placeholder (o definitivo vem depois com o mes
   "error": "phone is not on WhatsApp", "error_code": "phone_not_on_whatsapp" }
 ```
 
-Só para envios e ações pela API. Significa envio concluído (ou falhou), não entrega ao destinatário. `error`/`error_code` só em falha. `message_id` é o mesmo da resposta HTTP: o da mensagem nova ou, em ações, o da mensagem referenciada. `operation` (`send`, `edit`, `delete`, `reaction`, `remove_reaction`, `pin`, `unpin`, `poll_vote`, `event_response`) diz o que foi feito. Só `operation: "send"` com `error_code` é erro de envio. Nas outras, a ação falhou e a mensagem referenciada continua como estava. `wabox_id` também correlaciona com a chamada original.
+Só para envios e ações pela API. Significa envio concluído (ou falhou), não entrega ao destinatário. `error`/`error_code` só em falha. `phone` é o destino como foi enviado; `canonical_phone` (quando o Wabox conhece, via `verify_phone` ou cache) é o número para onde a mensagem foi, que pode diferir no nono dígito, e é o número com que `received`/`message_status` dessa conversa chegam. Use-o para ligar respostas à conversa. `message_id` é o mesmo da resposta HTTP: o da mensagem nova ou, em ações, o da mensagem referenciada. `operation` (`send`, `edit`, `delete`, `reaction`, `remove_reaction`, `pin`, `unpin`, `poll_vote`, `event_response`) diz o que foi feito. Só `operation: "send"` com `error_code` é erro de envio. Nas outras, a ação falhou e a mensagem referenciada continua como estava. `wabox_id` também correlaciona com a chamada original.
 
 ## `message_status`
 

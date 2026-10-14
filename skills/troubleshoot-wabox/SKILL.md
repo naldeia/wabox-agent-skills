@@ -28,7 +28,7 @@ Rode `wabox.sh GET status` e leia o `status`:
 2. A mensagem ainda está na fila? Confira com `wabox.sh GET 'queue?page_size=50'`. Se estiver, a instância está desconectada ou a fila é longa (1–3 s entre mensagens; 1.000 msgs ≈ 30–50 min).
 3. Chegou `delivery` com o mesmo `wabox_id`?
    - Sem `error_code`, a mensagem saiu do aparelho. Se o contato não recebeu, olhe `message_status`. Sem nenhum `RECEIVED`, o contato está sem internet, bloqueou o número ou há shadow ban.
-   - Com `phone_not_on_whatsapp`, confira `GET /phone-exists/{phone}` (nono dígito, DDI).
+   - Com `phone_not_on_whatsapp`, confira `GET /phone-exists/{phone}` (nono dígito, DDI) e sugira `verify_phone: true` no envio, que manda para o número registrado. Se as respostas do contato chegam com outro número, compare com `canonical_phone` do `delivery`.
    - `message_not_found` indica encaminhamento/edição de legenda fora do cache, ou voto sem o segredo da enquete original. Não reenvie como mensagem nova automaticamente; confira a ação solicitada.
    - `media_download_failed` e `media_invalid` indicam URL não pública, lenta, ou acima de 16 MB/100 MB. Teste a URL com `curl -I` e use base64.
    - `send_timeout` indica que o aparelho não confirmou, e a mensagem pode ter saído. Não reenvie às cegas; olhe `message_status`.

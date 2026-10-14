@@ -1,6 +1,6 @@
 # Endpoints mais usados (API pública)
 
-Prefixo: `https://api.wabox.me/instances/{instance_id}/token/{token}`. O token na URL é a credencial base; nenhum header é necessário por padrão. Se o workspace ativa "Exigir API key nas rotas de instância", envie `Authorization: Bearer wbx_key_…` (API key do workspace com `instances:operate`; o header `Client-Token` com a mesma key é aceito como alias de compatibilidade z-api). `*` = obrigatório. Mensagens comuns aceitam `reply_to_message_id`, `mentioned[]`, `mention_all`, `delay_message`, `delay_typing` (s, 0–15) e `custom_message_id` (id da mensagem escolhido por você, 1–128 ASCII visíveis sem espaço, único por instância; vira o `message_id`, um id repetido gera `409 duplicate_message_id` e ele não combina com `edit_message_id`). Ações como reação, pin e exclusão têm campos próprios; confira o OpenAPI.
+Prefixo: `https://api.wabox.me/instances/{instance_id}/token/{token}`. O token na URL é a credencial base; nenhum header é necessário por padrão. Se o workspace ativa "Exigir API key nas rotas de instância", envie `Authorization: Bearer wbx_key_…` (API key do workspace com `instances:operate`; o header `Client-Token` com a mesma key é aceito como alias de compatibilidade z-api). `*` = obrigatório. Mensagens comuns aceitam `reply_to_message_id`, `mentioned[]`, `mention_all`, `delay_message`, `delay_typing` (s, 0–15) `custom_message_id` (id da mensagem escolhido por você, 1–128 ASCII visíveis sem espaço, único por instância; vira o `message_id`, um id repetido gera `409 duplicate_message_id` e ele não combina com `edit_message_id`) e `verify_phone` (bool: confere o número no WhatsApp antes e envia para o número registrado, como com ou sem o nono dígito; sem conta, `delivery` com `phone_not_on_whatsapp`. O resultado fica em cache por 30 dias renovados a cada uso e vale para envios seguintes mesmo sem a flag). Ações como reação, pin e exclusão têm campos próprios; confira o OpenAPI.
 
 ## Instância
 
@@ -49,7 +49,7 @@ Envios/ações enfileirados respondem `{ id, message_id, wabox_id, status: "queu
 
 | Rota | Nota |
 | --- | --- |
-| `GET /phone-exists/{phone}` · `POST /phone-exists-batch { phones*[] }` (≤ 50) | confira antes de enviar; devolve o número canônico e `lid` |
+| `GET /phone-exists/{phone}` · `POST /phone-exists-batch { phones*[] }` (≤ 50) | confira antes de enviar (ou use `verify_phone` no envio); devolve o número canônico e `lid`, e alimenta o cache de números dos envios |
 | `GET /contacts?q&page&page_size` · `GET /contacts/{phone}` · `GET /contacts/{phone}/picture?preview` | ao vivo do aparelho, nada persistido |
 | `GET /contacts/{phone}/presence` | `{ phone, status: AVAILABLE|UNAVAILABLE|null, last_seen, momment }`; exige `settings.always_online` (vale após `restart`); a 1ª consulta assina e espera até 3 s |
 | `POST /contacts/{phone}/block|unblock` · `GET /contacts/blocked` | |
