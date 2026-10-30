@@ -84,4 +84,4 @@ Estados: `PENDING`, `SENT`, `RECEIVED`, `READ`, `READ_BY_ME`, `PLAYED`. Processe
 
 ## Filtros (em `PUT /webhooks`)
 
-`ignore_groups`, `ignore_private`, `ignore_text|image|video|audio|document`, `notify_sent_by_me`. Prefira filtrar aqui a descartar no seu lado.
+`ignore_groups`, `ignore_private`, `ignore_text|image|video|audio|document`, `notify_sent_by_me`, `notify_status` (status/stories dos contatos em `status@broadcast`; desligado por padrão). Prefira filtrar aqui a descartar no seu lado.

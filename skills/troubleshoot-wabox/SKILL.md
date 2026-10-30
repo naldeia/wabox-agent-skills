@@ -39,7 +39,7 @@ Rode `wabox.sh GET status` e leia o `status`:
 
 ## 3. "Webhook não chega"
 
-1. Rode `wabox.sh GET webhooks`. Se `use_workspace_webhooks: true`, consulte `GET /account/webhooks` ou o painel para ver URLs/filtros/segredo efetivos; o GET da instância mostra os próprios. `single_url_enabled` usa a URL única. `received`, `delivery` e `message_status` são eventos distintos. Filtros podem descartar eventos e mensagens próprias exigem `notify_sent_by_me`.
+1. Rode `wabox.sh GET webhooks`. Se `use_workspace_webhooks: true`, consulte `GET /account/webhooks` ou o painel para ver URLs/filtros/segredo efetivos; o GET da instância mostra os próprios. `single_url_enabled` usa a URL única. `received`, `delivery` e `message_status` são eventos distintos. Filtros podem descartar eventos e mensagens próprias exigem `notify_sent_by_me` e status dos contatos (`status@broadcast`) exigem `notify_status`.
 2. O endpoint responde `2xx` em < 10 s? Falhas são reentregues em `10s, 1m, 10m, 1h, 6h` e depois descartadas. Painel › instância › Logs de webhook mostra status HTTP, duração e erro de cada tentativa, com reenvio manual.
 3. Está respondendo `401` porque a assinatura falha? Confira corpo cru, segredo efetivo (workspace × instância), rotação e relógio (> 5 min). Capture corpo/header originais no receptor de teste: o log do painel pode truncar o payload e não traz a assinatura original, então não serve como fixture HMAC completa. Mantenha o segredo anterior durante toda a janela de retry (~7 h 11 min + margem).
 4. Para isolar o seu servidor: suba `../integrate-wabox/scripts/webhook-sink.ts` num túnel e aponte a instância para ele. Se chega no sink e não no seu servidor, o problema é seu endpoint (firewall, HTTPS inválido, redirect, body parser).
