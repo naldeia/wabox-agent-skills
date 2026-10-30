@@ -48,7 +48,7 @@ Blocos de conteúdo:
 
 Outros campos de `received`: `sender_photo`, `message_expiration_seconds` + `expires_at` (mensagens temporárias).
 
-Notas: `waiting_message: true` é placeholder (o definitivo vem depois com o mesmo `message_id`, outro evento). Edições também reutilizam o ID, então deduplicar toda mensagem por `message_id` descartaria atualizações legítimas. Faça upsert por instância/chat/mensagem e aplique eventos de edição, revogação e reação. `from_me` só chega com `notify_sent_by_me` ligado, e `from_api` distingue API de celular. Correlacione o eco da API com o envio existente, sem criar outra mensagem ou disparar automação de entrada. Numa mensagem de grupo, `phone` é o grupo (use-o para responder no grupo) e `participant_phone` é quem enviou (use-o para responder no privado).
+Notas: `waiting_message: true` é placeholder (o definitivo vem depois com o mesmo `message_id`, outro evento). Edições também reutilizam o ID, então deduplicar toda mensagem por `message_id` descartaria atualizações legítimas. Faça upsert por instância/chat/mensagem e aplique eventos de edição, revogação e reação. `from_me` só chega com `notify_sent_by_me` ligado e cobre só o que o número envia por fora da API (celular, WhatsApp Web): o WhatsApp não devolve ao Wabox o que ele mesmo envia, então envio pela API não gera `received` (confirme por `delivery`/`message_status`) e `from_api` vem sempre `false` no webhook. Grave `from_me` como mensagem enviada pelo atendente no aparelho, sem disparar automação de entrada. Numa mensagem de grupo, `phone` é o grupo (use-o para responder no grupo) e `participant_phone` é quem enviou (use-o para responder no privado).
 
 ## `delivery`
 
