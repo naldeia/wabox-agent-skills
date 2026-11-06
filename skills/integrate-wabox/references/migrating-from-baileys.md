@@ -33,6 +33,7 @@ Converta os JIDs guardados uma vez (função `jidToPhone`) em vez de espalhar `r
 | `message.conversation` / `extendedTextMessage` | `text.message` |
 | `imageMessage`/`videoMessage`/`audioMessage`/`documentMessage`/`stickerMessage` + `downloadMediaMessage()` | bloco `image`/`video`/`audio`/`document`/`sticker` já com `url` assinada (expira em 24 h; copie para o seu storage). Sem descriptografia do seu lado |
 | `contextInfo.stanzaId` (citação) | `reference_message_id` |
+| `contextInfo.mentionedJid` | `mentioned: [{ phone, lid }]` (no envio, `mentioned: ["<número ou lid>"]`) |
 | `protocolMessage` REVOKE | `notification: "REVOKE"` · edição vira `is_edit: true` com o mesmo `message_id` |
 | `reactionMessage` · `pollUpdateMessage` | blocos `reaction` · `poll_vote` (voto já descriptografado) |
 | Placeholder "aguardando mensagem" / retry de decrypt | `waiting_message: true`, depois o definitivo com o mesmo `message_id` |

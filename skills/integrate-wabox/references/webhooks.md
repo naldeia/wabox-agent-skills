@@ -26,7 +26,7 @@ Envelope comum: `{ type, event_id, instance_id, momment (epoch ms), … }`.
 }
 ```
 
-Campos opcionais de grupo (`participant_*`) e citação (`reference_message_id`) só aparecem quando aplicáveis. Mensagens normalmente têm um bloco de conteúdo; notificações e placeholders podem não ter nenhum. Não exija `text`/mídia em todo evento.
+Campos opcionais de grupo (`participant_*`), citação (`reference_message_id`) e menções (`mentioned: [{ phone, lid }]`, quem o texto/legenda cita com `@<dígitos do número ou do LID>`) só aparecem quando aplicáveis. Mensagens normalmente têm um bloco de conteúdo; notificações e placeholders podem não ter nenhum. Não exija `text`/mídia em todo evento.
 
 Blocos de conteúdo:
 
