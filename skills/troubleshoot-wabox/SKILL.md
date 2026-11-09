@@ -18,6 +18,7 @@ Rode `wabox.sh GET status` e leia o `status`:
 | `disconnected` / `connecting` | queda de rede ou outra sessão web assumiu; reconecta sozinha | espere; se persistir > 2 min, `POST /restart` |
 | `disconnected` nunca pareada (`instance_status` com `disconnect_reason: qr_timeout`) | o QR ficou ~13 min sem leitura e o pareamento parou (não é bug) | `GET /qr-code` recomeça o pareamento com QR novo |
 | `starting` | sessão carregando | espere segundos |
+| `created` e `GET /qr-code` → `503 no_capacity` | nenhum servidor do Wabox tem vaga para iniciar a sessão agora | continue consultando `GET /qr-code` a cada ~30 s; a sessão inicia sozinha quando houver vaga. Se passar de alguns minutos, avise o suporte |
 | `banned` | bloqueio reportado pelo WhatsApp | suspenda envios e investigue com suporte; não presuma bloqueio permanente nem entre em loop de restart |
 
 É uma conexão linked device. Não use `smartphone_connected: false` isoladamente para concluir que o celular está sem internet: no fallback sem resposta do engine esse campo reflete o último status da instância.
@@ -60,6 +61,7 @@ Rode `wabox.sh GET status` e leia o `status`:
 | `409 instance_not_connected` | ação imediata (contatos, grupos, read, presence) com instância fora |
 | `429 queue_full` | 1.000 msgs na fila |
 | `429 rate_limited` | > 60 req/s por instância (polling agressivo de `/status` ou `/qr-code` conta) |
+| `503 no_capacity` | sem vaga nos servidores para iniciar a sessão; a instância continua criada e inicia na próxima consulta de QR com vaga |
 | `502 action_failed` | aparelho falhou ao executar; leituras podem repetir, escritas exigem reconciliação |
 
 ### 401/403 de credencial: como isolar

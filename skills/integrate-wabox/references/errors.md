@@ -27,6 +27,7 @@ Formato: `{ "error": { "code": "…", "message": "…", "details"? } }`. `code` 
 | 400 | `invalid_phone` | `phone` fora dos formatos aceitos |
 | 502 | `action_failed` / `send_failed` | O aparelho falhou ao executar. Leituras podem ser repetidas; escritas precisam de reconciliação antes de repetir |
 | 503 | `engine_unavailable` / `history_not_configured` | Nó do engine fora do ar (repita com backoff) / histórico não habilitado no ambiente |
+| 503 | `no_capacity` | Sem vaga nos servidores para iniciar a sessão (`GET /qr-code`, `phone-code`, `restart`). A instância continua criada; repita a cada ~30 s e ela inicia quando houver vaga |
 | 5xx | | Leituras: backoff com limite. Envios/criação/ações podem já ter ocorrido; não repetir automaticamente |
 
 ## Política de retry
