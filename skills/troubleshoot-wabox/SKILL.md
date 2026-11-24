@@ -87,6 +87,7 @@ Ações: parar campanhas, deixar o número descansar dias, aumentar `delay_messa
 | --- | --- |
 | `enabled: false` e `messages: []` | `settings.history_enabled` está desligado (`GET /settings`). Religar não traz nada de volta; só um novo pareamento reenvia o histórico |
 | `enabled: true`, `messages: []`, `synced_at: null` | O celular não incluiu essa conversa no sync (sem atividade recente) ou o sync ainda está chegando. Confira o `phone` (mesmo formato de `GET /chats`: dígitos, `<id>-group`, `<lid>@lid`) |
+| Conversa com `phone` = `<lid>@lid` em `GET /chats` | O WhatsApp ainda não informou o número desse contato. Quando informar, a conversa passa a vir pelo número, e `GET /chats/{numero}/messages` já inclui o que veio sob o LID |
 | Algumas conversas vazias logo após parear | O celular envia em lotes durante alguns minutos e não há webhook de fim. Leia de novo depois |
 | Tudo sumiu | Houve logout (pelo painel, pela API ou pelo celular) ou exclusão da instância, e o Wabox apagou o histórico. Só volta pareando de novo |
 | Mensagens recentes não aparecem | Comportamento esperado. Depois do pareamento, o tráfego vem só por webhook |
