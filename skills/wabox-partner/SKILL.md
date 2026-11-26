@@ -46,12 +46,12 @@ Legado (antes de 2026-09-21): a credencial era o header `Account-Token: act_…`
 | Rota | Body / resposta |
 | --- | --- |
 | `GET /account/plan` | `{ subscription_status, due_at, instance_slots, instances_used, instances_available }` (`instance_slots` e `instances_available` são `null` em conta Partner) |
-| `POST /account/instances` | `{ name*, webhooks?, settings? }`; retorna a instância completa com `id`, `token`, `api_url`, `webhooks.secret`. Ocupa um slot (`409 instance_limit_reached` se não há) e já inicia a sessão (status `qr` em segundos) |
+| `POST /account/instances` | `{ name*, webhooks?, settings?, session? }`; retorna a instância completa com `id`, `token`, `api_url`, `webhooks.secret`. Ocupa um slot (`409 instance_limit_reached` se não há) e já inicia a sessão (status `qr` em segundos). Com `session` (só Partner), sobe já conectada a partir da sessão do Baileys e a resposta traz `session_import` (ver "Migrar do Baileys sem QR") |
 | `GET /account/instances?status&q&page&page_size` | `{ data[], page, page_size, total }`; `status` aceita `connected`\|`disconnected`; `q` busca nome/id/número; itens trazem `token` |
 | `GET /account/instances/{id}` | instância |
 | `PUT /account/instances/{id}` | parcial: `{ name?, webhooks?, settings? }` (mesmos campos de `PUT /webhooks` e `PUT /settings` da API pública) |
 | `POST /account/instances/{id}/rotate-token` | `{ token }` novo; o antigo para na hora |
-| `DELETE /account/instances/{id}` | 204; desconecta o aparelho no celular, para a sessão, descarta a fila e libera o slot |
+| `DELETE /account/instances/{id}` | 204; desconecta o aparelho no celular, para a sessão, descarta a fila e libera o slot. `?logout=false`: fecha a sessão e apaga as chaves do Wabox **sem** desvincular (rollback de uma importação); 204 só com o servidor confirmando, senão 503 e repita |
 | `GET /account/webhooks` · `PUT /account/webhooks` | webhooks do workspace (mesmos campos de `webhooks`, sem `use_workspace_webhooks`) + `secret`, `configured`, `used_by_instances`. Instância criada sem `webhooks` herda URLs, filtros e este `secret`; o `secret` nasce no primeiro `PUT` |
 | `POST /account/webhooks/secret` | `{ secret }` novo do workspace |
 
@@ -80,4 +80,16 @@ Por canal guarde: `tenant_id`, `channel_id`, provedor ativo, `wabox_instance_id`
 - Configure `PUT /account/webhooks` antes de criar a primeira instância. Sem URL nenhuma (nem do workspace, nem da instância), o `instance_status` inicial e as primeiras mensagens se perdem, e webhooks não entregues não são recuperáveis.
 - Uma instância com `webhooks` próprios tem `secret` próprio; não tente validar a assinatura dela com o `secret` do workspace.
 - O Wabox apaga o histórico recente (passo 4) no logout, na exclusão da instância e ao desligar `history_enabled`, e ele só volta num novo pareamento. Importe-o logo após conectar; não trate o Wabox como arquivo das conversas.
-- Migrando canais que hoje rodam em Baileys: a sessão não é portável, e todo cliente pareia de novo (QR ou pairing code). Veja `../integrate-wabox/references/migrating-from-baileys.md`.
+- Migrando canais que hoje rodam em Baileys: conta Partner importa a sessão (abaixo) e o cliente não pareia de novo. Sem Partner, todo cliente pareia de novo (QR ou pairing code). Veja `../integrate-wabox/references/migrating-from-baileys.md`.
+
+## Migrar do Baileys sem QR (Partner)
+
+`POST /account/instances` com `session: { format: "baileys-multifile", files: { "creds.json": {…}, "app-state-sync-key-*.json": {…}, "pre-key-*.json": {…} } }` (o conteúdo de cada arquivo do `useMultiFileAuthState`, como o Baileys gravou; o resto da pasta é descartado). Doc completa: `apps/docs/migration/baileys.mdx`.
+
+1. Pare o Baileys do número **e confirme** antes. Nunca `logout` no Baileys (desvincula). Timeout de cliente ≥ 90 s.
+2. Resultado em `session_import.result`: `connected` (estável 5 s: é o sinal de corte, não o webhook) · `pending` (segue tentando; espere `instance_status`, não reenvie a sessão) · `revoked` (peça `GET /qr-code` na mesma instância) · `banned`.
+3. Erros: `409 session_conflict` (Baileys ainda vivo; pare e repita) · `409 session_in_use` (`details.instance_id`/`status` se da sua conta) · `422 invalid_session` · `413 session_too_large` · `503 retry_import` (repita) · `503 import_unknown`: sem `details` foi desfeita, repita; com `details.instance_id`, repita `DELETE …?logout=false` nela até `204` — **nunca** o DELETE comum.
+4. `409 instance_busy` em qualquer operação da instância enquanto uma importação ou rollback está pendente.
+5. Nos 10 min seguintes, `disconnect_reason: "import_conflict"` = outro cliente tomou a sessão; o Wabox apagou a cópia dele sem desvincular e não reconecta.
+6. Primeiras mensagens de cada conversa podem chegar alguns segundos atrasadas (reenvio); se demorar, `received` com `waiting_message: true` e depois o definitivo com o mesmo `message_id` (upsert; nunca troque conteúdo por placeholder; automação só no definitivo). Sem histórico do pareamento.
+7. Rollback: `DELETE /account/instances/{id}?logout=false` → `204` → só então religue o Baileys.
